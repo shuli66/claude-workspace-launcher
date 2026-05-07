@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# User config
+*.log
+
+# Local OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+*.spec
+build/
+dist/
+
+# Local screenshots or temp exports
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Keep distributed icon asset
+!claude_icon.ico
