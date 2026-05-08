@@ -86,6 +86,11 @@ Claude Code 在 Windows PowerShell 里很好用，但每次手动切换目录、
 
 ## Requirements
 
+### For EXE version (推荐)
+- Windows 10/11
+- Claude Code installed and available in PATH
+
+### For Python version (开发者)
 - Windows 10/11
 - Python 3.7+
 - Claude Code installed and available in PATH
@@ -98,21 +103,45 @@ Dependencies (auto-installed):
 
 ## Installation | 安装方式
 
-### Option 1: PowerShell installer (recommended)
+### Option 1: Download EXE (推荐 / Recommended)
 
-1. Download or clone this repository
-2. Open the project folder
-3. Install dependencies: `pip install -r requirements.txt`
-4. Right-click `install.ps1`
-5. Run with PowerShell
+**最简单的方式 - 无需安装 Python**
 
-### Option 2: Batch installer
+1. 从 [Releases](https://github.com/shuli66/claude-workspace-launcher/releases) 下载最新的 `ClaudeLauncher.exe`
+2. 将 exe 文件放到任意目录（建议：`C:\Program Files\ClaudeLauncher\`）
+3. 双击 `install_exe.bat` 创建桌面快捷方式
+4. 或者直接双击 `ClaudeLauncher.exe` 运行
 
-1. Open the project folder
+**优点**：
+- ✅ 无需安装 Python
+- ✅ 无需安装依赖
+- ✅ 双击即用
+- ✅ 适合所有 Windows 用户
+
+### Option 2: Run from source (开发者)
+
+**需要 Python 环境**
+
+1. Clone this repository
 2. Install dependencies: `pip install -r requirements.txt`
-3. Double-click `install.bat`
+3. Run: `python claude_launcher.py`
 
-After installation, a desktop shortcut named **Claude Launcher** will be created.
+Or use the installer scripts:
+- PowerShell: Right-click `install.ps1` and run
+- Batch: Double-click `install.bat`
+
+---
+
+## Build from source | 从源码打包
+
+If you want to build the exe yourself:
+
+```bash
+pip install pyinstaller
+python build.py
+```
+
+The exe will be generated in `dist/ClaudeLauncher.exe`
 
 ---
 
