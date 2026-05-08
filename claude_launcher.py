@@ -262,7 +262,7 @@ class ClaudeLauncher:
         self.root = root
         self.lock_socket = lock_socket
         self.root.title("Claude Code Launcher")
-        self.root.geometry("680x720")
+        self.root.geometry("700x780")
         self.root.resizable(False, False)
 
         self.config_file = Path.home() / ".claude_launcher_config.json"
@@ -684,7 +684,7 @@ class ClaudeLauncher:
 
         # 启动选项
         options_section = tk.Frame(content, bg=self.colors['card_bg'])
-        options_section.pack(fill=tk.X, pady=(0, 20))
+        options_section.pack(fill=tk.X, pady=(0, 16))
 
         options_inner = tk.Frame(options_section, bg=self.colors['card_bg'])
         options_inner.pack(fill=tk.X, padx=16, pady=16)
@@ -718,12 +718,12 @@ class ClaudeLauncher:
 
         # 主题切换
         theme_frame = tk.Frame(options_inner, bg=self.colors['card_bg'])
-        theme_frame.pack(anchor=tk.W, pady=(12, 0))
+        theme_frame.pack(anchor=tk.W, pady=(16, 0))
 
         theme_label = tk.Label(theme_frame, text="主题:",
-                              font=("Segoe UI", 9),
+                              font=("Segoe UI", 9, "bold"),
                               bg=self.colors['card_bg'], fg=self.colors['text'])
-        theme_label.pack(side=tk.LEFT, padx=(0, 8))
+        theme_label.pack(side=tk.LEFT, padx=(0, 12))
 
         theme_buttons = [
             ("跟随系统", "auto"),
@@ -737,10 +737,10 @@ class ClaudeLauncher:
             btn_fg = '#ffffff' if is_active else self.colors['text']
 
             theme_btn = tk.Label(theme_frame, text=text,
-                                font=("Segoe UI", 8),
+                                font=("Segoe UI", 9),
                                 bg=btn_bg, fg=btn_fg,
-                                cursor="hand2", padx=12, pady=4)
-            theme_btn.pack(side=tk.LEFT, padx=(0, 4))
+                                cursor="hand2", padx=16, pady=6)
+            theme_btn.pack(side=tk.LEFT, padx=(0, 6))
             theme_btn.bind("<Button-1>", lambda e, t=theme: self.switch_theme(t))
 
         # 状态栏
@@ -757,7 +757,7 @@ class ClaudeLauncher:
 
         # 底部操作栏
         footer = tk.Frame(content, bg=self.colors['bg'])
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
+        footer.pack(fill=tk.X, pady=(16, 0))
 
         # 次要操作按钮
         secondary_actions = tk.Frame(footer, bg=self.colors['bg'])
