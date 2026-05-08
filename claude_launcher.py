@@ -3,7 +3,9 @@ from tkinter import ttk, filedialog, messagebox
 import subprocess
 import json
 import os
+import sys
 from pathlib import Path
+import socket
 
 class ModernButton(tk.Canvas):
     def __init__(self, parent, text, command, bg_color, hover_color, text_color, width=200, height=45, icon=None, border_radius=8):
@@ -844,9 +846,22 @@ class ClaudeLauncher:
             self.set_status("启动 Claude Code 失败", "error")
 
 def main():
-    root = tk.Tk()
-    app = ClaudeLauncher(root)
+    # 单实例检测 - 使用 socket 端口锁
+    lock_socket = None
+    try:
+        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lock_socket.bind(('127.0.0.1', 58432))  # 使用固定端口作为锁
+    except socket.error:
+        # 端口已被占用，说明已有实例在运行
+        messagebox.showwarning("Claude Launcher", "启动器已在运行中")
+        sys.exit(0)
 
+    root = tk.Tk()
+
+    # 减少窗口闪烁：先隐藏窗口，初始化完成后再显示
+    root.withdraw()
+
+    app = ClaudeLauncher(root)
     app.update_current_directory_card()
 
     # 窗口居中
@@ -857,7 +872,21 @@ def main():
     y = (root.winfo_screenheight() // 2) - (height // 2)
     root.geometry(f'{width}x{height}+{x}+{y}')
 
+    # 显示窗口
+    root.deiconify()
+
+    # 保持 socket 锁直到程序退出
+    def on_closing():
+        if lock_socket:
+            lock_socket.close()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
+
+    # 清理
+    if lock_socket:
+        lock_socket.close()
 
 if __name__ == "__main__":
     main()
