@@ -1,232 +1,197 @@
-# claude-workspace-launcher
+# Claude Workspace Launcher
 
-> A polished Windows launcher for Claude Code with workspace selection, favorites, recent projects, dual launch modes, and a desktop-friendly workflow.
->
-> 一个面向 Windows 的 Claude Code 启动器，支持工作区快速切换、收藏夹、最近项目、双启动模式，以及更顺手的桌面端工作流。
+> 一个专为 Windows 用户设计的 Claude Code 启动器，让工作区切换和启动变得简单高效。
 
-[![Platform](https://img.shields.io/badge/platform-Windows-0078D4?style=flat-square)](#)
-[![Python](https://img.shields.io/badge/python-3.7%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#requirements)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](./LICENSE)
+[![Platform](https://img.shields.io/badge/平台-Windows-0078D4?style=flat-square)](#)
+[![Python](https://img.shields.io/badge/python-3.7%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#系统要求)
+[![License](https://img.shields.io/badge/许可证-MIT-green?style=flat-square)](./LICENSE)
+[![Release](https://img.shields.io/github/v/release/shuli66/claude-workspace-launcher?style=flat-square)](https://github.com/shuli66/claude-workspace-launcher/releases)
 
-## Why this project? | 为什么做这个项目
+## 📸 界面预览
 
-Claude Code 在 Windows PowerShell 里很好用，但每次手动切换目录、输入命令、决定启动模式，都会打断工作流。
-
-`claude-workspace-launcher` 的目标很简单：
-
-- **更快进入项目**：快速选择工作区、最近目录、收藏夹
-- **更少重复操作**：一键普通启动或跳过权限启动
-- **更像专业桌面工具**：当前工作区卡片、状态提示、资源管理器集成
-- **更适合日常开发**：为频繁使用 Claude Code 的 Windows 用户优化
+![Claude Launcher 界面展示](./展示.png)
 
 ---
 
-## Features | 功能特性
+## 💡 为什么需要这个工具？
 
-### Core workflow | 核心工作流
-- Workspace selection with direct path input
-- Real-time path validation
-- Recent directories visualization
-- Favorites management with instant refresh
-- Current workspace action card
-- Dual launch buttons:
-  - **Normal Launch** / 普通启动
-  - **Skip-Permissions Launch** / 跳过权限启动
+Claude Code 在 Windows PowerShell 里很好用，但每次都要：
+- 手动 `cd` 切换到项目目录
+- 输入 `claude` 或 `claude --dangerously-skip-permissions`
+- 记住不同项目的路径
+- 在多个项目间频繁切换
 
-### Desktop-friendly UX | 桌面体验优化
-- Explorer integration (`📂`)
-- System tray support (minimize to tray)
-- Single instance (activate existing window)
-- Status bar feedback
-- Auto-close after launch
-- Keyboard shortcuts
-- Custom Claude icon for app window and shortcut
-- Windows shortcut installer scripts
-- No PowerShell window popup
+这些重复操作会打断工作流，降低效率。
 
-### UI polish | 界面优化
-- Theme switching (Light / Dark / Auto follow system)
-- Modern themes inspired by VS Code / JetBrains tools
-- Clear visual hierarchy
-- Top action card for current workspace
-- Interactive recent/favorite items
-- Smooth window initialization (no flicker)
+**Claude Workspace Launcher 让这一切变得简单**：
+- ✨ 一键启动，无需命令行
+- 📁 可视化管理工作区
+- ⭐ 收藏常用项目
+- 🎨 现代化界面，符合 Windows 使用习惯
 
 ---
 
-## Preview | 界面预览
+## ✨ 核心功能
 
-```text
-┌──────────────────────────────────────────────┐
-│ Claude Code                                  │
-│ Quick workspace launcher for Windows         │
-├──────────────────────────────────────────────┤
-│ Current Workspace                            │
-│ project-name                                 │
-│ D:\Projects\my-app                         │
-│ [valid] [last launch: normal]                │
-│ [Normal Launch] [Skip-Permissions Launch]    │
-│ [📂] [★]                                     │
-├──────────────────────────────────────────────┤
-│ Workspace Path                               │
-│ [input path____________________] [Browse][📂]│
-├──────────────────────────────────────────────┤
-│ Recent Directories                           │
-│ Favorites                                    │
-├──────────────────────────────────────────────┤
-│ Launch Options                               │
-│ [x] Auto-close after launch                  │
-├──────────────────────────────────────────────┤
-│ [Add to Favorites] [Clear History]           │
-│ Enter = normal launch                        │
-└──────────────────────────────────────────────┘
-```
+### 🚀 快速启动
+- **双模式启动**：普通模式 / 跳过权限模式
+- **一键切换**：在当前工作区卡片直接启动
+- **自动记忆**：记住上次使用的启动模式
 
----
+### 📁 工作区管理
+- **路径输入**：直接输入或粘贴目录路径
+- **浏览选择**：通过文件浏览器选择目录
+- **实时验证**：输入时自动检查路径有效性
+- **资源管理器集成**：一键在资源管理器中打开目录
 
-## Requirements
+### ⭐ 收藏夹系统
+- **快速收藏**：点击 ★ 图标添加到收藏夹
+- **即时访问**：收藏的项目显示在专属区域
+- **一键启动**：直接从收藏夹启动项目
 
-### For EXE version (推荐)
-- Windows 10/11
-- Claude Code installed and available in PATH
+### 🕐 最近目录
+- **自动记录**：自动保存最近使用的 10 个目录
+- **快速回溯**：轻松返回之前的工作区
+- **可视化列表**：清晰展示项目名称和完整路径
 
-### For Python version (开发者)
-- Windows 10/11
-- Python 3.7+
-- Claude Code installed and available in PATH
+### 🎨 主题切换
+- **浅色模式**：适合白天使用
+- **深色模式**：适合夜间使用
+- **跟随系统**：自动跟随 Windows 系统主题
 
-Dependencies (auto-installed):
-- pystray (system tray support)
-- Pillow (icon rendering)
+### 🔧 桌面体验
+- **系统托盘**：最小化到托盘，不占用任务栏
+- **单实例运行**：重复启动自动激活已有窗口
+- **快捷键支持**：
+  - `Enter` - 普通启动
+  - `Ctrl+O` - 浏览目录
+  - `Esc` - 最小化到托盘
+- **设置面板**：独立的设置对话框，清晰管理选项
+
+### 🎯 界面设计
+- **现代化 UI**：参考 VS Code / JetBrains 设计风格
+- **卡片式布局**：信息层级清晰，一目了然
+- **流畅交互**：悬停效果、状态反馈
+- **可滚动内容**：支持大量收藏夹，鼠标滚轮滚动
 
 ---
 
-## Installation | 安装方式
+## 📦 下载安装
 
-### Option 1: Download EXE (推荐 / Recommended)
+### 方式一：下载 EXE（推荐）
 
-**最简单的方式 - 无需安装 Python**
+**✅ 无需安装 Python，开箱即用！**
 
-1. 从 [Releases](https://github.com/shuli66/claude-workspace-launcher/releases) 下载最新的 `ClaudeLauncher.exe`
-2. 将 exe 文件放到任意目录（建议：`C:\Program Files\ClaudeLauncher\`）
-3. 双击 `install_exe.bat` 创建桌面快捷方式
-4. 或者直接双击 `ClaudeLauncher.exe` 运行
+1. 前往 [Releases](https://github.com/shuli66/claude-workspace-launcher/releases) 页面
+2. 下载最新版本的 `ClaudeLauncher.exe`（约 31MB）
+3. 下载 `install_exe.bat`（可选，用于创建桌面快捷方式）
+4. 将文件放到任意目录（推荐：`C:\Program Files\ClaudeLauncher\`）
+5. 双击 `install_exe.bat` 创建桌面快捷方式
+6. 双击桌面快捷方式启动
 
 **优点**：
-- ✅ 无需安装 Python
+- ✅ 无需 Python 环境
 - ✅ 无需安装依赖
 - ✅ 双击即用
-- ✅ 适合所有 Windows 用户
+- ✅ 适合所有用户
 
-### Option 2: Run from source (开发者)
+### 方式二：从源码运行（开发者）
 
-**需要 Python 环境**
-
-1. Clone this repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run: `python claude_launcher.py`
-
-Or use the installer scripts:
-- PowerShell: Right-click `install.ps1` and run
-- Batch: Double-click `install.bat`
-
----
-
-## Build from source | 从源码打包
-
-If you want to build the exe yourself:
+**需要 Python 3.7+ 环境**
 
 ```bash
-pip install pyinstaller
-python build.py
+# 克隆仓库
+git clone https://github.com/shuli66/claude-workspace-launcher.git
+cd claude-workspace-launcher
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 运行
+python claude_launcher.py
 ```
 
-The exe will be generated in `dist/ClaudeLauncher.exe`
+或使用安装脚本：
+- PowerShell：右键 `install.ps1` 选择"使用 PowerShell 运行"
+- 批处理：双击 `install.bat`
 
 ---
 
-## Usage | 使用方法
+## 🎯 使用指南
 
-### Basic usage
+### 基本使用
 
-1. Launch the app from the desktop shortcut
-2. Type or browse a workspace path
-3. Check the current workspace card
-4. Choose one of the two launch buttons:
-   - **普通启动 / Normal Launch**
-   - **跳过权限启动 / Skip-Permissions Launch**
+1. **启动程序**
+   - 双击桌面快捷方式或 exe 文件
 
-### Launch modes
+2. **选择工作目录**
+   - 在"工作目录"输入框中输入路径
+   - 或点击"浏览"按钮选择目录
+   - 路径会实时验证，显示 ✓ 可用 或 ✕ 无效
 
-#### Normal Launch
-Runs:
+3. **启动 Claude Code**
+   - 在"当前目录"卡片中选择启动模式：
+     - **普通启动**：标准权限确认流程
+     - **跳过权限启动**：快速启动，跳过权限提示
+   - 点击对应按钮即可启动
 
-```bash
-claude
-```
+4. **管理收藏夹**
+   - 点击目录旁的 ☆ 图标添加到收藏夹
+   - 点击 ★ 图标从收藏夹移除
+   - 收藏的项目会显示在"收藏夹"区域
 
-Use this when you want standard permission confirmation behavior.
+5. **使用最近目录**
+   - 最近使用的目录自动显示在"最近目录"区域
+   - 点击任意项目快速切换
 
-#### Skip-Permissions Launch
-Runs:
+### 高级功能
 
-```bash
-claude --dangerously-skip-permissions
-```
+#### 设置面板
+点击右上角 ⚙️ 图标打开设置：
+- **外观主题**：选择浅色/深色/跟随系统
+- **启动选项**：设置是否启动后自动关闭启动器
+- **退出程序**：点击红色"退出程序"按钮完全退出
 
-Use this only when you understand the tradeoff and want a faster, less interruptive workflow.
+#### 系统托盘
+- 点击窗口关闭按钮或按 `Esc` 最小化到托盘
+- 右键托盘图标：
+  - 显示窗口
+  - 设置
+  - 退出程序
 
----
-
-## Keyboard shortcuts | 快捷键
-
-- `Enter` → Normal Launch
-- `Ctrl + O` → Browse directory
-- `Esc` → Minimize to system tray
-
-### System tray | 系统托盘
-
-- Close window or press `Esc` to minimize to system tray
-- Right-click tray icon to show window or quit
-- Double-click desktop shortcut when running will activate existing window
-
-### Theme switching | 主题切换
-
-Choose from three theme options in Launch Options:
-- **Auto** (跟随系统): Follows Windows system theme
-- **Light** (浅色): Light theme
-- **Dark** (深色): Dark theme
+#### 快捷键
+- `Enter` - 使用普通模式启动
+- `Ctrl+O` - 打开目录浏览器
+- `Esc` - 最小化到系统托盘
 
 ---
 
-## Project structure
+## ⚙️ 系统要求
 
-```text
-claude-workspace-launcher/
-├── claude_launcher.py
-├── claude_icon.ico
-├── requirements.txt
-├── install.ps1
-├── install.bat
-├── run.bat
-├── create_icon.py
-├── download_icon.py
-├── README.md
-├── LICENSE
-└── .gitignore
-```
+### EXE 版本
+- Windows 10 或 Windows 11
+- Claude Code 已安装并在 PATH 中可用
+
+### Python 版本（开发者）
+- Windows 10 或 Windows 11
+- Python 3.7 或更高版本
+- Claude Code 已安装并在 PATH 中可用
+
+**依赖库**（使用 pip 自动安装）：
+- `pystray` - 系统托盘支持
+- `Pillow` - 图标渲染
 
 ---
 
-## Configuration | 配置文件
+## 🔧 配置文件
 
-The launcher stores user preferences in:
+启动器会在用户目录下创建配置文件：
 
-```text
+```
 %USERPROFILE%\.claude_launcher_config.json
 ```
 
-Example:
+配置文件示例：
 
 ```json
 {
@@ -238,55 +203,128 @@ Example:
     "D:\\Projects\\my-app"
   ],
   "last_mode": "normal",
-  "auto_close": true
+  "auto_close": true,
+  "theme": "auto"
 }
+```
+
+**配置项说明**：
+- `recent_dirs` - 最近使用的目录列表（最多 10 个）
+- `favorites` - 收藏夹列表（最多 10 个）
+- `last_mode` - 上次使用的启动模式（`normal` 或 `skip`）
+- `auto_close` - 启动后是否自动关闭启动器
+- `theme` - 主题设置（`auto`、`light` 或 `dark`）
+
+---
+
+## 🛠️ 从源码打包
+
+如果你想自己打包 exe：
+
+```bash
+# 安装 PyInstaller
+pip install pyinstaller
+
+# 运行打包脚本
+python build.py
+```
+
+打包后的 exe 文件位于 `dist/ClaudeLauncher.exe`
+
+---
+
+## 📂 项目结构
+
+```
+claude-workspace-launcher/
+├── claude_launcher.py      # 主程序
+├── claude_icon.ico         # 应用图标
+├── requirements.txt        # Python 依赖
+├── build.py               # 打包脚本
+├── install.ps1            # PowerShell 安装脚本
+├── install.bat            # 批处理安装脚本
+├── install_exe.bat        # EXE 快捷方式安装脚本
+├── run.bat                # 运行脚本
+├── 展示.png               # 界面展示图
+├── README.md              # 项目说明
+├── LICENSE                # MIT 许可证
+└── .gitignore             # Git 忽略文件
 ```
 
 ---
 
-## Troubleshooting | 常见问题
+## ❓ 常见问题
 
-### Shortcut icon looks wrong
-- Re-run `install.ps1`
-- Delete the old desktop shortcut first if needed
-- Windows may cache shortcut icons; recreating the shortcut usually fixes it
+### 快捷方式图标显示异常
+- 重新运行 `install_exe.bat` 或 `install.ps1`
+- 如果问题依然存在，删除旧的桌面快捷方式后重新创建
+- Windows 可能会缓存快捷方式图标，重新创建通常可以解决
 
-### Launcher window opens but Claude does not start
-- Make sure `claude` is installed and available in PATH
-- Run `claude --version` in PowerShell to verify
+### 启动器窗口打开但 Claude 没有启动
+- 确保 `claude` 命令在 PATH 中可用
+- 在 PowerShell 中运行 `claude --version` 验证安装
+- 检查选择的工作目录是否有效
 
-### Path validation says invalid
-- Confirm the input is a real directory
-- Use the Browse button to avoid typo issues
+### 路径验证显示无效
+- 确认输入的是真实存在的目录
+- 使用"浏览"按钮避免输入错误
+- 检查路径中是否有特殊字符
 
----
+### 无法退出程序
+- 点击右上角 ⚙️ 图标打开设置
+- 点击红色"退出程序"按钮
+- 或右键系统托盘图标，选择"退出程序"
 
-## Roadmap
-
-- [ ] Git branch / repository status in current workspace card
-- [ ] Scrollable recent/favorites lists
-- [ ] Theme switching
-- [ ] Project grouping
-- [ ] Better packaging for easier installation
-
----
-
-## Contributing
-
-Issues and pull requests are welcome.
-
-If you have ideas to improve the Windows workflow for Claude Code, feel free to open an issue.
+### 主题切换不生效
+- 打开设置面板（右上角 ⚙️）
+- 选择想要的主题
+- 主题会立即应用并重建界面
 
 ---
 
-## License
+## 🗺️ 开发路线
 
-MIT License
+- [ ] Git 分支/仓库状态显示
+- [ ] 可滚动的最近目录/收藏夹列表
+- [ ] 主题自定义
+- [ ] 项目分组功能
+- [ ] 更好的打包方案（减小文件体积）
+- [ ] 多语言支持
 
 ---
 
-## Star this repo
+## 🤝 贡献
 
-If this launcher saves you time when using Claude Code on Windows, consider giving it a star.
+欢迎提交 Issue 和 Pull Request！
 
-如果这个项目让你在 Windows 上使用 Claude Code 更顺手，欢迎点一个 Star。
+如果你有改进 Windows 下 Claude Code 使用体验的想法，欢迎提出。
+
+---
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](./LICENSE) 文件
+
+---
+
+## ⭐ 支持项目
+
+如果这个启动器让你在 Windows 上使用 Claude Code 更顺手，欢迎给项目点个 Star ⭐
+
+---
+
+## 📮 反馈与支持
+
+- 🐛 [报告 Bug](https://github.com/shuli66/claude-workspace-launcher/issues)
+- 💡 [功能建议](https://github.com/shuli66/claude-workspace-launcher/issues)
+- 📖 [查看文档](https://github.com/shuli66/claude-workspace-launcher)
+
+---
+
+<div align="center">
+
+**让 Claude Code 的启动变得简单高效** 🚀
+
+Made with ❤️ for Windows users
+
+</div>

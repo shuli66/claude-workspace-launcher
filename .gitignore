@@ -26,5 +26,6 @@ dist/
 *.jpeg
 *.webp
 
-# Keep distributed icon asset
+# Keep distributed assets
 !claude_icon.ico
+!展示.png
