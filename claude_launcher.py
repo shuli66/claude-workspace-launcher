@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 import socket
+import struct
 
 class ModernButton(tk.Canvas):
     def __init__(self, parent, text, command, bg_color, hover_color, text_color, width=200, height=45, icon=None, border_radius=8):
@@ -845,15 +846,27 @@ class ClaudeLauncher:
             messagebox.showerror("错误", f"启动失败: {str(e)}")
             self.set_status("启动 Claude Code 失败", "error")
 
+def bring_to_front():
+    """激活已运行的实例窗口"""
+    try:
+        # 连接到已运行实例的 socket
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(('127.0.0.1', 58432))
+        client.send(b'SHOW')  # 发送显示命令
+        client.close()
+    except:
+        pass
+
 def main():
     # 单实例检测 - 使用 socket 端口锁
     lock_socket = None
     try:
         lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        lock_socket.bind(('127.0.0.1', 58432))  # 使用固定端口作为锁
+        lock_socket.bind(('127.0.0.1', 58432))
+        lock_socket.listen(1)
     except socket.error:
-        # 端口已被占用，说明已有实例在运行
-        messagebox.showwarning("Claude Launcher", "启动器已在运行中")
+        # 端口已被占用，激活已有实例
+        bring_to_front()
         sys.exit(0)
 
     root = tk.Tk()
@@ -874,6 +887,25 @@ def main():
 
     # 显示窗口
     root.deiconify()
+
+    # 监听激活请求
+    def check_activation():
+        try:
+            lock_socket.settimeout(0.01)
+            conn, addr = lock_socket.accept()
+            data = conn.recv(1024)
+            conn.close()
+            if data == b'SHOW':
+                root.deiconify()
+                root.lift()
+                root.focus_force()
+        except socket.timeout:
+            pass
+        except:
+            pass
+        root.after(100, check_activation)
+
+    check_activation()
 
     # 保持 socket 锁直到程序退出
     def on_closing():
