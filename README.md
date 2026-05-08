@@ -35,17 +35,22 @@ Claude Code 在 Windows PowerShell 里很好用，但每次手动切换目录、
 
 ### Desktop-friendly UX | 桌面体验优化
 - Explorer integration (`📂`)
+- System tray support (minimize to tray)
+- Single instance (activate existing window)
 - Status bar feedback
 - Auto-close after launch
 - Keyboard shortcuts
 - Custom Claude icon for app window and shortcut
 - Windows shortcut installer scripts
+- No PowerShell window popup
 
 ### UI polish | 界面优化
-- Modern dark theme inspired by VS Code / JetBrains tools
+- Theme switching (Light / Dark / Auto follow system)
+- Modern themes inspired by VS Code / JetBrains tools
 - Clear visual hierarchy
 - Top action card for current workspace
 - Interactive recent/favorite items
+- Smooth window initialization (no flicker)
 
 ---
 
@@ -85,8 +90,9 @@ Claude Code 在 Windows PowerShell 里很好用，但每次手动切换目录、
 - Python 3.7+
 - Claude Code installed and available in PATH
 
-Optional:
-- Pillow (only needed if you want to regenerate icon assets)
+Dependencies (auto-installed):
+- pystray (system tray support)
+- Pillow (icon rendering)
 
 ---
 
@@ -96,13 +102,15 @@ Optional:
 
 1. Download or clone this repository
 2. Open the project folder
-3. Right-click `install.ps1`
-4. Run with PowerShell
+3. Install dependencies: `pip install -r requirements.txt`
+4. Right-click `install.ps1`
+5. Run with PowerShell
 
 ### Option 2: Batch installer
 
 1. Open the project folder
-2. Double-click `install.bat`
+2. Install dependencies: `pip install -r requirements.txt`
+3. Double-click `install.bat`
 
 After installation, a desktop shortcut named **Claude Launcher** will be created.
 
@@ -145,7 +153,20 @@ Use this only when you understand the tradeoff and want a faster, less interrupt
 
 - `Enter` → Normal Launch
 - `Ctrl + O` → Browse directory
-- `Esc` → Close launcher
+- `Esc` → Minimize to system tray
+
+### System tray | 系统托盘
+
+- Close window or press `Esc` to minimize to system tray
+- Right-click tray icon to show window or quit
+- Double-click desktop shortcut when running will activate existing window
+
+### Theme switching | 主题切换
+
+Choose from three theme options in Launch Options:
+- **Auto** (跟随系统): Follows Windows system theme
+- **Light** (浅色): Light theme
+- **Dark** (深色): Dark theme
 
 ---
 
@@ -155,6 +176,7 @@ Use this only when you understand the tradeoff and want a faster, less interrupt
 claude-workspace-launcher/
 ├── claude_launcher.py
 ├── claude_icon.ico
+├── requirements.txt
 ├── install.ps1
 ├── install.bat
 ├── run.bat

@@ -7,6 +7,9 @@ import sys
 from pathlib import Path
 import socket
 import struct
+import winreg
+from pystray import Icon, Menu, MenuItem
+from PIL import Image, ImageDraw
 
 class ModernButton(tk.Canvas):
     def __init__(self, parent, text, command, bg_color, hover_color, text_color, width=200, height=45, icon=None, border_radius=8):
@@ -249,52 +252,150 @@ class RecentItem(tk.Frame):
                         pass
 
 class ClaudeLauncher:
-    def __init__(self, root):
+    def __init__(self, root, lock_socket=None):
         self.root = root
+        self.lock_socket = lock_socket
         self.root.title("Claude Code Launcher")
         self.root.geometry("680x720")
         self.root.resizable(False, False)
 
-        # 现代化配色方案 - 参考 VS Code / JetBrains
-        self.colors = {
-            'bg': '#1e1e1e',              # 主背景
-            'card_bg': '#252526',          # 卡片背景
-            'hover_bg': '#2a2d2e',         # 悬停背景
-            'accent': '#007acc',           # 主题色（蓝色）
-            'accent_hover': '#1e8ad6',     # 主题色悬停
-            'text': '#cccccc',             # 主文字
-            'text_secondary': '#858585',   # 次要文字
-            'border': '#3e3e42',           # 边框
-            'input_bg': '#3c3c3c',         # 输入框背景
-            'input_border': '#555555',     # 输入框边框
-            'success': '#4ec9b0',          # 成功色
-            'danger': '#f48771',           # 危险色
-            'danger_bg': '#5a1d1d',        # 危险背景
-            'warning': '#dcdcaa'           # 警告色
-        }
+        self.config_file = Path.home() / ".claude_launcher_config.json"
+        self.load_config()
+
+        # 初始化主题
+        self.current_theme = self.config.get("theme", "auto")
+        self.setup_theme()
 
         self.root.configure(bg=self.colors['bg'])
 
         # 设置窗口图标
-        icon_path = Path(__file__).parent / "claude_icon.ico"
-        if icon_path.exists():
+        self.icon_path = Path(__file__).parent / "claude_icon.ico"
+        if self.icon_path.exists():
             try:
-                self.root.iconbitmap(str(icon_path))
+                self.root.iconbitmap(str(self.icon_path))
             except:
                 pass
 
-        self.config_file = Path.home() / ".claude_launcher_config.json"
-        self.load_config()
+        # 系统托盘
+        self.tray_icon = None
+        self.setup_tray()
 
         self.setup_ui()
 
         # 绑定快捷键
         self.root.bind('<Return>', lambda e: self.launch_claude())
-        self.root.bind('<Escape>', lambda e: self.root.destroy())
+        self.root.bind('<Escape>', lambda e: self.minimize_to_tray())
         self.root.bind('<Control-o>', lambda e: self.browse_directory())
 
         self.validation_job = None
         self.path_status = None
+
+    def get_system_theme(self):
+        """检测 Windows 系统主题"""
+        try:
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize")
+            value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+            winreg.CloseKey(key)
+            return "light" if value == 1 else "dark"
+        except:
+            return "dark"
+
+    def setup_theme(self):
+        """设置主题配色"""
+        if self.current_theme == "auto":
+            theme = self.get_system_theme()
+        else:
+            theme = self.current_theme
+
+        if theme == "light":
+            self.colors = {
+                'bg': '#f3f3f3',
+                'card_bg': '#ffffff',
+                'hover_bg': '#e8e8e8',
+                'accent': '#0078d4',
+                'accent_hover': '#106ebe',
+                'text': '#1f1f1f',
+                'text_secondary': '#616161',
+                'border': '#d1d1d1',
+                'input_bg': '#ffffff',
+                'input_border': '#8a8a8a',
+                'success': '#107c10',
+                'danger': '#d13438',
+                'danger_bg': '#fde7e9',
+                'warning': '#ca5010'
+            }
+        else:
+            self.colors = {
+                'bg': '#1e1e1e',
+                'card_bg': '#252526',
+                'hover_bg': '#2a2d2e',
+                'accent': '#007acc',
+                'accent_hover': '#1e8ad6',
+                'text': '#cccccc',
+                'text_secondary': '#858585',
+                'border': '#3e3e42',
+                'input_bg': '#3c3c3c',
+                'input_border': '#555555',
+                'success': '#4ec9b0',
+                'danger': '#f48771',
+                'danger_bg': '#5a1d1d',
+                'warning': '#dcdcaa'
+            }
+
+    def switch_theme(self, theme):
+        """切换主题"""
+        self.current_theme = theme
+        self.config["theme"] = theme
+        self.save_config()
+        self.setup_theme()
+        self.rebuild_ui()
+
+    def setup_tray(self):
+        """设置系统托盘"""
+        def create_tray_image():
+            # 创建托盘图标
+            width = 64
+            height = 64
+            image = Image.new('RGB', (width, height), color='#007acc')
+            dc = ImageDraw.Draw(image)
+            dc.ellipse([16, 16, 48, 48], fill='#ffffff')
+            return image
+
+        def on_show(icon, item):
+            self.root.after(0, self.show_window)
+
+        def on_quit(icon, item):
+            self.root.after(0, self.quit_app)
+
+        menu = Menu(
+            MenuItem('显示窗口', on_show, default=True),
+            MenuItem('退出', on_quit)
+        )
+
+        self.tray_icon = Icon("Claude Launcher", create_tray_image(), "Claude Launcher", menu)
+
+    def minimize_to_tray(self):
+        """最小化到系统托盘"""
+        self.root.withdraw()
+        if self.tray_icon and not self.tray_icon.visible:
+            import threading
+            threading.Thread(target=self.tray_icon.run, daemon=True).start()
+
+    def show_window(self):
+        """从托盘恢复窗口"""
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def quit_app(self):
+        """退出应用"""
+        if self.tray_icon:
+            self.tray_icon.stop()
+        if self.lock_socket:
+            self.lock_socket.close()
+        self.root.quit()
+        sys.exit(0)
 
     def load_config(self):
         if self.config_file.exists():
@@ -305,7 +406,8 @@ class ClaudeLauncher:
                 "recent_dirs": [],
                 "favorites": [],
                 "last_mode": "normal",
-                "auto_close": True
+                "auto_close": True,
+                "theme": "auto"
             }
 
     def save_config(self):
@@ -599,6 +701,33 @@ class ClaudeLauncher:
                                           style='Custom.TCheckbutton')
         auto_close_check.pack(anchor=tk.W)
 
+        # 主题切换
+        theme_frame = tk.Frame(options_inner, bg=self.colors['card_bg'])
+        theme_frame.pack(anchor=tk.W, pady=(12, 0))
+
+        theme_label = tk.Label(theme_frame, text="主题:",
+                              font=("Segoe UI", 9),
+                              bg=self.colors['card_bg'], fg=self.colors['text'])
+        theme_label.pack(side=tk.LEFT, padx=(0, 8))
+
+        theme_buttons = [
+            ("跟随系统", "auto"),
+            ("浅色", "light"),
+            ("深色", "dark")
+        ]
+
+        for text, theme in theme_buttons:
+            is_active = self.current_theme == theme
+            btn_bg = self.colors['accent'] if is_active else self.colors['border']
+            btn_fg = '#ffffff' if is_active else self.colors['text']
+
+            theme_btn = tk.Label(theme_frame, text=text,
+                                font=("Segoe UI", 8),
+                                bg=btn_bg, fg=btn_fg,
+                                cursor="hand2", padx=12, pady=4)
+            theme_btn.pack(side=tk.LEFT, padx=(0, 4))
+            theme_btn.bind("<Button-1>", lambda e, t=theme: self.switch_theme(t))
+
         # 状态栏
         self.status_var = tk.StringVar(value="准备就绪")
         status_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=32)
@@ -636,7 +765,7 @@ class ClaudeLauncher:
         shortcuts = [
             ("Enter", "普通启动"),
             ("Ctrl+O", "浏览"),
-            ("Esc", "退出")
+            ("Esc", "最小化")
         ]
 
         for key, desc in shortcuts:
@@ -874,7 +1003,7 @@ def main():
     # 减少窗口闪烁：先隐藏窗口，初始化完成后再显示
     root.withdraw()
 
-    app = ClaudeLauncher(root)
+    app = ClaudeLauncher(root, lock_socket)
     app.update_current_directory_card()
 
     # 窗口居中
@@ -909,14 +1038,15 @@ def main():
 
     # 保持 socket 锁直到程序退出
     def on_closing():
-        if lock_socket:
-            lock_socket.close()
-        root.destroy()
+        # 最小化到托盘而不是关闭
+        app.minimize_to_tray()
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.mainloop()
 
     # 清理
+    if app.tray_icon:
+        app.tray_icon.stop()
     if lock_socket:
         lock_socket.close()
 
