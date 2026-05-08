@@ -397,10 +397,17 @@ class SettingsDialog:
         button_frame = tk.Frame(footer, bg=colors['bg'])
         button_frame.pack(pady=12, padx=24)
 
+        # 退出程序按钮
+        quit_btn = ModernButton(button_frame, "退出程序", self.quit_app,
+                               colors['danger'], '#c2410c',
+                               '#ffffff', width=120, height=40)
+        quit_btn.pack(side=tk.LEFT, padx=(0, 8))
+
+        # 关闭按钮
         close_btn = ModernButton(button_frame, "关闭", self.dialog.destroy,
                                 colors['accent'], colors['accent_hover'],
                                 '#ffffff', width=120, height=40)
-        close_btn.pack()
+        close_btn.pack(side=tk.LEFT)
 
     def change_theme(self, theme):
         """切换主题"""
@@ -411,6 +418,11 @@ class SettingsDialog:
         """保存自动关闭设置"""
         self.launcher.config["auto_close"] = value
         self.launcher.save_config()
+
+    def quit_app(self):
+        """退出程序"""
+        self.dialog.destroy()
+        self.launcher.quit_app()
 
 class ClaudeLauncher:
     def __init__(self, root, lock_socket=None):
@@ -530,12 +542,17 @@ class ClaudeLauncher:
         def on_show(icon, item):
             self.root.after(0, self.show_window)
 
+        def on_settings(icon, item):
+            self.root.after(0, self.show_and_open_settings)
+
         def on_quit(icon, item):
             self.root.after(0, self.quit_app)
 
         menu = Menu(
             MenuItem('显示窗口', on_show, default=True),
-            MenuItem('退出', on_quit)
+            MenuItem('设置', on_settings),
+            Menu.SEPARATOR,
+            MenuItem('退出程序', on_quit)
         )
 
         self.tray_icon = Icon("Claude Launcher", create_tray_image(), "Claude Launcher", menu)
@@ -557,6 +574,11 @@ class ClaudeLauncher:
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
+
+    def show_and_open_settings(self):
+        """显示窗口并打开设置"""
+        self.show_window()
+        self.open_settings()
 
     def quit_app(self):
         """退出应用"""
