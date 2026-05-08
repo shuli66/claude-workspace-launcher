@@ -460,12 +460,61 @@ class ClaudeLauncher:
                                  bg=self.colors['card_bg'], fg=self.colors['text_secondary'])
         subtitle_label.pack(anchor=tk.W)
 
-        # 内容区域
-        content = tk.Frame(main_frame, bg=self.colors['bg'])
-        content.pack(fill=tk.BOTH, expand=True, padx=24, pady=20)
+        # 状态栏（移到顶部标题栏下方）
+        self.status_var = tk.StringVar(value="准备就绪")
+        status_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=28)
+        status_bar.pack(fill=tk.X)
+        status_bar.pack_propagate(False)
+
+        status_label = tk.Label(status_bar, textvariable=self.status_var,
+                               font=("Segoe UI", 8), bg=self.colors['card_bg'],
+                               fg=self.colors['text_secondary'], anchor=tk.W)
+        status_label.pack(fill=tk.BOTH, padx=12)
+        self.status_label = status_label
+
+        # 可滚动内容区域
+        scroll_container = tk.Frame(main_frame, bg=self.colors['bg'])
+        scroll_container.pack(fill=tk.BOTH, expand=True)
+
+        # 创建 Canvas 和 Scrollbar
+        canvas = tk.Canvas(scroll_container, bg=self.colors['bg'], highlightthickness=0)
+        scrollbar = tk.Scrollbar(scroll_container, orient="vertical", command=canvas.yview)
+
+        # 创建可滚动的 Frame
+        content = tk.Frame(canvas, bg=self.colors['bg'])
+
+        # 配置 Canvas
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # 布局
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # 将 content frame 添加到 canvas
+        canvas_frame = canvas.create_window((0, 0), window=content, anchor="nw")
+
+        # 绑定配置事件以更新滚动区域
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas_frame, width=event.width)
+
+        content.bind("<Configure>", on_frame_configure)
+        canvas.bind("<Configure>", on_canvas_configure)
+
+        # 鼠标滚轮支持
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+        # 添加内边距
+        content_inner = tk.Frame(content, bg=self.colors['bg'])
+        content_inner.pack(fill=tk.BOTH, expand=True, padx=24, pady=20)
 
         # 当前目录卡片
-        current_section = tk.Frame(content, bg=self.colors['card_bg'])
+        current_section = tk.Frame(content_inner, bg=self.colors['card_bg'])
         current_section.pack(fill=tk.X, pady=(0, 16))
 
         current_inner = tk.Frame(current_section, bg=self.colors['card_bg'])
@@ -548,7 +597,7 @@ class ClaudeLauncher:
         self.current_favorite_btn.bind("<Button-1>", lambda e: self.toggle_favorite(self.dir_var.get().strip()))
 
         # 工作目录选择
-        dir_section = tk.Frame(content, bg=self.colors['bg'])
+        dir_section = tk.Frame(content_inner, bg=self.colors['bg'])
         dir_section.pack(fill=tk.X, pady=(0, 16))
 
         dir_label = tk.Label(dir_section, text="工作目录",
@@ -616,7 +665,7 @@ class ClaudeLauncher:
 
         # 最近目录
         if self.config.get("recent_dirs"):
-            recent_section = tk.Frame(content, bg=self.colors['bg'])
+            recent_section = tk.Frame(content_inner, bg=self.colors['bg'])
             recent_section.pack(fill=tk.X, pady=(0, 16))
 
             recent_header = tk.Frame(recent_section, bg=self.colors['bg'])
@@ -650,7 +699,7 @@ class ClaudeLauncher:
 
         # 收藏夹
         if self.config.get("favorites"):
-            fav_section = tk.Frame(content, bg=self.colors['bg'])
+            fav_section = tk.Frame(content_inner, bg=self.colors['bg'])
             fav_section.pack(fill=tk.X, pady=(0, 16))
 
             fav_header = tk.Frame(fav_section, bg=self.colors['bg'])
@@ -683,7 +732,7 @@ class ClaudeLauncher:
                 fav_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
 
         # 启动选项
-        options_section = tk.Frame(content, bg=self.colors['card_bg'])
+        options_section = tk.Frame(content_inner, bg=self.colors['card_bg'])
         options_section.pack(fill=tk.X, pady=(0, 16))
 
         options_inner = tk.Frame(options_section, bg=self.colors['card_bg'])
@@ -743,20 +792,8 @@ class ClaudeLauncher:
             theme_btn.pack(side=tk.LEFT, padx=(0, 6))
             theme_btn.bind("<Button-1>", lambda e, t=theme: self.switch_theme(t))
 
-        # 状态栏
-        self.status_var = tk.StringVar(value="准备就绪")
-        status_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=32)
-        status_bar.pack(fill=tk.X, side=tk.BOTTOM)
-        status_bar.pack_propagate(False)
-
-        status_label = tk.Label(status_bar, textvariable=self.status_var,
-                               font=("Segoe UI", 8), bg=self.colors['card_bg'],
-                               fg=self.colors['text_secondary'], anchor=tk.W)
-        status_label.pack(fill=tk.BOTH, padx=12)
-        self.status_label = status_label
-
         # 底部操作栏
-        footer = tk.Frame(content, bg=self.colors['bg'])
+        footer = tk.Frame(content_inner, bg=self.colors['bg'])
         footer.pack(fill=tk.X, pady=(16, 0))
 
         # 次要操作按钮
