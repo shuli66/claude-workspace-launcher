@@ -257,6 +257,161 @@ class RecentItem(tk.Frame):
                     except:
                         pass
 
+class SettingsDialog:
+    """设置对话框"""
+    def __init__(self, parent, launcher):
+        self.parent = parent
+        self.launcher = launcher
+        self.dialog = tk.Toplevel(parent)
+        self.dialog.title("设置")
+        self.dialog.geometry("500x400")
+        self.dialog.resizable(False, False)
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+
+        # 居中显示
+        self.dialog.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() - 500) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - 400) // 2
+        self.dialog.geometry(f"500x400+{x}+{y}")
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        colors = self.launcher.colors
+        self.dialog.configure(bg=colors['bg'])
+
+        # 标题
+        header = tk.Frame(self.dialog, bg=colors['card_bg'], height=60)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+
+        title_label = tk.Label(header, text="⚙️ 设置",
+                              font=("Segoe UI", 14, "bold"),
+                              bg=colors['card_bg'], fg=colors['text'])
+        title_label.pack(pady=16, padx=20, anchor=tk.W)
+
+        # 内容区域
+        content = tk.Frame(self.dialog, bg=colors['bg'])
+        content.pack(fill=tk.BOTH, expand=True, padx=24, pady=20)
+
+        # 主题设置
+        theme_section = tk.Frame(content, bg=colors['card_bg'])
+        theme_section.pack(fill=tk.X, pady=(0, 16))
+
+        theme_inner = tk.Frame(theme_section, bg=colors['card_bg'])
+        theme_inner.pack(fill=tk.X, padx=20, pady=20)
+
+        theme_title = tk.Label(theme_inner, text="外观主题",
+                              font=("Segoe UI", 11, "bold"),
+                              bg=colors['card_bg'], fg=colors['text'])
+        theme_title.pack(anchor=tk.W, pady=(0, 12))
+
+        theme_desc = tk.Label(theme_inner, text="选择应用的外观主题",
+                             font=("Segoe UI", 9),
+                             bg=colors['card_bg'], fg=colors['text_secondary'])
+        theme_desc.pack(anchor=tk.W, pady=(0, 16))
+
+        # 主题选项
+        theme_buttons_frame = tk.Frame(theme_inner, bg=colors['card_bg'])
+        theme_buttons_frame.pack(fill=tk.X)
+
+        themes = [
+            ("🌓 跟随系统", "auto", "自动跟随 Windows 系统主题"),
+            ("☀️ 浅色模式", "light", "使用浅色主题"),
+            ("🌙 深色模式", "dark", "使用深色主题")
+        ]
+
+        for text, theme_id, desc in themes:
+            is_active = self.launcher.current_theme == theme_id
+
+            theme_option = tk.Frame(theme_buttons_frame, bg=colors['card_bg'])
+            theme_option.pack(fill=tk.X, pady=(0, 8))
+
+            # 单选按钮样式
+            radio_frame = tk.Frame(theme_option, bg=colors['card_bg'])
+            radio_frame.pack(side=tk.LEFT, fill=tk.Y)
+
+            radio_indicator = tk.Label(radio_frame,
+                                      text="●" if is_active else "○",
+                                      font=("Segoe UI", 14),
+                                      bg=colors['card_bg'],
+                                      fg=colors['accent'] if is_active else colors['text_secondary'],
+                                      cursor="hand2")
+            radio_indicator.pack(padx=(0, 12))
+
+            # 文本区域
+            text_frame = tk.Frame(theme_option, bg=colors['card_bg'])
+            text_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+            theme_label = tk.Label(text_frame, text=text,
+                                  font=("Segoe UI", 10, "bold" if is_active else "normal"),
+                                  bg=colors['card_bg'],
+                                  fg=colors['text'],
+                                  cursor="hand2")
+            theme_label.pack(anchor=tk.W)
+
+            theme_desc_label = tk.Label(text_frame, text=desc,
+                                       font=("Segoe UI", 8),
+                                       bg=colors['card_bg'],
+                                       fg=colors['text_secondary'])
+            theme_desc_label.pack(anchor=tk.W)
+
+            # 绑定点击事件
+            for widget in [theme_option, radio_indicator, text_frame, theme_label, theme_desc_label]:
+                widget.bind("<Button-1>", lambda e, t=theme_id: self.change_theme(t))
+
+        # 启动选项
+        launch_section = tk.Frame(content, bg=colors['card_bg'])
+        launch_section.pack(fill=tk.X, pady=(0, 16))
+
+        launch_inner = tk.Frame(launch_section, bg=colors['card_bg'])
+        launch_inner.pack(fill=tk.X, padx=20, pady=20)
+
+        launch_title = tk.Label(launch_inner, text="启动选项",
+                               font=("Segoe UI", 11, "bold"),
+                               bg=colors['card_bg'], fg=colors['text'])
+        launch_title.pack(anchor=tk.W, pady=(0, 12))
+
+        # 自动关闭选项
+        auto_close_var = tk.BooleanVar(value=self.launcher.config.get("auto_close", True))
+
+        style = ttk.Style()
+        style.configure('Settings.TCheckbutton',
+                       background=colors['card_bg'],
+                       foreground=colors['text'],
+                       font=("Segoe UI", 10))
+
+        auto_close_check = ttk.Checkbutton(launch_inner,
+                                          text="启动 Claude Code 后自动关闭启动器",
+                                          variable=auto_close_var,
+                                          style='Settings.TCheckbutton',
+                                          command=lambda: self.save_auto_close(auto_close_var.get()))
+        auto_close_check.pack(anchor=tk.W)
+
+        # 底部按钮
+        footer = tk.Frame(self.dialog, bg=colors['bg'], height=60)
+        footer.pack(fill=tk.X, side=tk.BOTTOM)
+        footer.pack_propagate(False)
+
+        button_frame = tk.Frame(footer, bg=colors['bg'])
+        button_frame.pack(pady=12, padx=24)
+
+        close_btn = ModernButton(button_frame, "关闭", self.dialog.destroy,
+                                colors['accent'], colors['accent_hover'],
+                                '#ffffff', width=120, height=40)
+        close_btn.pack()
+
+    def change_theme(self, theme):
+        """切换主题"""
+        self.launcher.switch_theme(theme)
+        self.dialog.destroy()
+
+    def save_auto_close(self, value):
+        """保存自动关闭设置"""
+        self.launcher.config["auto_close"] = value
+        self.launcher.save_config()
+
 class ClaudeLauncher:
     def __init__(self, root, lock_socket=None):
         self.root = root
@@ -459,6 +614,18 @@ class ClaudeLauncher:
                                  font=("Segoe UI", 9),
                                  bg=self.colors['card_bg'], fg=self.colors['text_secondary'])
         subtitle_label.pack(anchor=tk.W)
+
+        # 设置按钮（右上角）
+        settings_btn = tk.Label(header_content, text="⚙️",
+                               font=("Segoe UI", 20),
+                               bg=self.colors['card_bg'],
+                               fg=self.colors['text_secondary'],
+                               cursor="hand2",
+                               padx=12)
+        settings_btn.pack(side=tk.RIGHT)
+        settings_btn.bind("<Enter>", lambda e: settings_btn.config(fg=self.colors['accent']))
+        settings_btn.bind("<Leave>", lambda e: settings_btn.config(fg=self.colors['text_secondary']))
+        settings_btn.bind("<Button-1>", lambda e: self.open_settings())
 
         # 状态栏（移到顶部标题栏下方）
         self.status_var = tk.StringVar(value="准备就绪")
@@ -731,66 +898,9 @@ class ClaudeLauncher:
                 )
                 fav_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
 
-        # 启动选项
-        options_section = tk.Frame(content_inner, bg=self.colors['card_bg'])
-        options_section.pack(fill=tk.X, pady=(0, 16))
-
-        options_inner = tk.Frame(options_section, bg=self.colors['card_bg'])
-        options_inner.pack(fill=tk.X, padx=16, pady=16)
-
-        options_label = tk.Label(options_inner, text="启动选项",
-                                font=("Segoe UI", 10, "bold"),
-                                bg=self.colors['card_bg'], fg=self.colors['text'])
-        options_label.pack(anchor=tk.W, pady=(0, 12))
-
+        # 初始化 last_mode 和 auto_close_var
         self.last_mode = self.config.get("last_mode", "normal")
-
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure('Custom.TRadiobutton',
-                       background=self.colors['card_bg'],
-                       foreground=self.colors['text'],
-                       font=("Segoe UI", 9))
-
         self.auto_close_var = tk.BooleanVar(value=self.config.get("auto_close", True))
-
-        style.configure('Custom.TCheckbutton',
-                       background=self.colors['card_bg'],
-                       foreground=self.colors['text'],
-                       font=("Segoe UI", 9))
-
-        auto_close_check = ttk.Checkbutton(options_inner,
-                                          text="启动后自动关闭此窗口",
-                                          variable=self.auto_close_var,
-                                          style='Custom.TCheckbutton')
-        auto_close_check.pack(anchor=tk.W)
-
-        # 主题切换
-        theme_frame = tk.Frame(options_inner, bg=self.colors['card_bg'])
-        theme_frame.pack(anchor=tk.W, pady=(16, 0))
-
-        theme_label = tk.Label(theme_frame, text="主题:",
-                              font=("Segoe UI", 9, "bold"),
-                              bg=self.colors['card_bg'], fg=self.colors['text'])
-        theme_label.pack(side=tk.LEFT, padx=(0, 12))
-
-        theme_buttons = [
-            ("跟随系统", "auto"),
-            ("浅色", "light"),
-            ("深色", "dark")
-        ]
-
-        for text, theme in theme_buttons:
-            is_active = self.current_theme == theme
-            btn_bg = self.colors['accent'] if is_active else self.colors['border']
-            btn_fg = '#ffffff' if is_active else self.colors['text']
-
-            theme_btn = tk.Label(theme_frame, text=text,
-                                font=("Segoe UI", 9),
-                                bg=btn_bg, fg=btn_fg,
-                                cursor="hand2", padx=16, pady=6)
-            theme_btn.pack(side=tk.LEFT, padx=(0, 6))
-            theme_btn.bind("<Button-1>", lambda e, t=theme: self.switch_theme(t))
 
         # 底部操作栏
         footer = tk.Frame(content_inner, bg=self.colors['bg'])
@@ -842,6 +952,10 @@ class ClaudeLauncher:
         if directory:
             self.dir_var.set(directory)
             self.set_status(f"已选择目录: {directory}")
+
+    def open_settings(self):
+        """打开设置对话框"""
+        SettingsDialog(self.root, self)
 
     def set_status(self, message, tone="info"):
         color_map = {
