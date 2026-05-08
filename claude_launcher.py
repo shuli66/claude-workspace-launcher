@@ -8,8 +8,14 @@ from pathlib import Path
 import socket
 import struct
 import winreg
-from pystray import Icon, Menu, MenuItem
-from PIL import Image, ImageDraw
+
+# 可选依赖：系统托盘支持
+try:
+    from pystray import Icon, Menu, MenuItem
+    from PIL import Image, ImageDraw
+    TRAY_AVAILABLE = True
+except ImportError:
+    TRAY_AVAILABLE = False
 
 class ModernButton(tk.Canvas):
     def __init__(self, parent, text, command, bg_color, hover_color, text_color, width=200, height=45, icon=None, border_radius=8):
@@ -353,6 +359,10 @@ class ClaudeLauncher:
 
     def setup_tray(self):
         """设置系统托盘"""
+        if not TRAY_AVAILABLE:
+            self.tray_icon = None
+            return
+
         def create_tray_image():
             # 创建托盘图标
             width = 64
@@ -377,8 +387,13 @@ class ClaudeLauncher:
 
     def minimize_to_tray(self):
         """最小化到系统托盘"""
+        if not TRAY_AVAILABLE or not self.tray_icon:
+            # 如果没有托盘支持，直接最小化窗口
+            self.root.iconify()
+            return
+
         self.root.withdraw()
-        if self.tray_icon and not self.tray_icon.visible:
+        if not self.tray_icon.visible:
             import threading
             threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
