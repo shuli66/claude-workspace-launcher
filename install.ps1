@@ -20,22 +20,20 @@ Write-Host ""
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $launcherPath = Join-Path $scriptDir "claude_launcher.py"
-$runBatPath = Join-Path $scriptDir "run.bat"
 
 if (-not (Test-Path $launcherPath)) {
     Write-Host "[ERROR] claude_launcher.py not found" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-if (-not (Test-Path $runBatPath)) {
-    Write-Host "[ERROR] run.bat not found" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
     exit 1
 }
 
 Write-Host "[OK] Launcher files found" -ForegroundColor Green
 Write-Host ""
+
+$pythonwPath = (Get-Command pythonw.exe -ErrorAction SilentlyContinue).Source
+if (-not $pythonwPath) {
+    Write-Host "[ERROR] pythonw.exe not found in PATH" -ForegroundColor Red
+    exit 1
+}
 
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = Join-Path $desktop "Claude Launcher.lnk"
@@ -48,7 +46,8 @@ try {
 
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($shortcutPath)
-    $Shortcut.TargetPath = $runBatPath
+    $Shortcut.TargetPath = $pythonwPath
+    $Shortcut.Arguments = "`"$launcherPath`""
     $Shortcut.WorkingDirectory = $scriptDir
 
     if (Test-Path $iconPath) {
@@ -65,5 +64,5 @@ try {
 } catch {
     Write-Host "[ERROR] Failed to create shortcut: $_" -ForegroundColor Red
     Write-Host "Create manually with target:" -ForegroundColor Yellow
-    Write-Host "`"$runBatPath`"" -ForegroundColor White
+    Write-Host "`"$pythonwPath`" `"$launcherPath`"" -ForegroundColor White
 }
