@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 import subprocess
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 import socket
@@ -172,7 +173,7 @@ class FavoriteItem(tk.Frame):
                             pass
 
 class RecentItem(tk.Frame):
-    def __init__(self, parent, path, on_select, on_launch, on_open_explorer, on_toggle_favorite, is_favorite, colors):
+    def __init__(self, parent, path, on_select, on_launch, on_open_explorer, on_toggle_favorite, is_favorite, colors, is_available=True):
         super().__init__(parent, bg=colors['card_bg'], height=52)
         self.path = path
         self.on_select = on_select
@@ -181,14 +182,17 @@ class RecentItem(tk.Frame):
         self.on_toggle_favorite = on_toggle_favorite
         self.colors = colors
         self.is_favorite = is_favorite
+        self.is_available = is_available
 
         self.pack_propagate(False)
 
         content_frame = tk.Frame(self, bg=colors['card_bg'])
         content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=16, pady=10)
 
-        icon_label = tk.Label(content_frame, text="🕘", font=("Segoe UI", 14),
-                             bg=colors['card_bg'], fg=colors['text_secondary'])
+        icon_label = tk.Label(content_frame, text="🕘" if is_available else "⚠",
+                             font=("Segoe UI", 14),
+                             bg=colors['card_bg'],
+                             fg=colors['text_secondary'] if is_available else colors['warning'])
         icon_label.pack(side=tk.LEFT, padx=(0, 12))
 
         path_info = tk.Frame(content_frame, bg=colors['card_bg'])
@@ -200,11 +204,19 @@ class RecentItem(tk.Frame):
         name_label.pack(fill=tk.X)
 
         path_label = tk.Label(path_info, text=path, font=("Segoe UI", 8),
-                             bg=colors['card_bg'], fg=colors['text_secondary'], anchor=tk.W)
+                             bg=colors['card_bg'],
+                             fg=colors['text_secondary'] if is_available else colors['danger'],
+                             anchor=tk.W)
         path_label.pack(fill=tk.X)
 
         button_frame = tk.Frame(self, bg=colors['card_bg'])
         button_frame.pack(side=tk.RIGHT, padx=12)
+
+        if not is_available:
+            status_label = tk.Label(button_frame, text="无效", font=("Segoe UI", 8),
+                                    bg=colors['danger_bg'], fg=colors['danger'],
+                                    padx=8, pady=3)
+            status_label.pack(side=tk.LEFT, padx=(0, 6))
 
         open_btn = tk.Label(button_frame, text="📂", font=("Segoe UI", 11),
                            bg=colors['card_bg'], fg=colors['text'], cursor="hand2", padx=8)
@@ -221,11 +233,13 @@ class RecentItem(tk.Frame):
         favorite_btn.bind("<Leave>", lambda e: favorite_btn.config(bg=colors['card_bg']))
         favorite_btn.bind("<Button-1>", lambda e: self.on_toggle_favorite(path))
 
+        launch_bg = colors['accent'] if is_available else colors['border']
+        launch_fg = '#ffffff' if is_available else colors['text_secondary']
         launch_btn = tk.Label(button_frame, text="启动", font=("Segoe UI", 9, "bold"),
-                             bg=colors['accent'], fg='#ffffff', cursor="hand2", padx=16, pady=6)
+                             bg=launch_bg, fg=launch_fg, cursor="hand2", padx=16, pady=6)
         launch_btn.pack(side=tk.LEFT)
-        launch_btn.bind("<Enter>", lambda e: launch_btn.config(bg=colors['accent_hover']))
-        launch_btn.bind("<Leave>", lambda e: launch_btn.config(bg=colors['accent']))
+        launch_btn.bind("<Enter>", lambda e: launch_btn.config(bg=colors['accent_hover'] if is_available else colors['hover_bg']))
+        launch_btn.bind("<Leave>", lambda e: launch_btn.config(bg=launch_bg))
         launch_btn.bind("<Button-1>", lambda e: self.on_launch(path))
 
         for widget in [self, content_frame, icon_label, path_info, name_label, path_label]:
@@ -240,7 +254,7 @@ class RecentItem(tk.Frame):
                 child.config(bg=self.colors['hover_bg'])
                 for subchild in child.winfo_children():
                     try:
-                        if subchild.cget("text") not in ["📂", "★", "☆", "启动"]:
+                        if subchild.cget("text") not in ["📂", "★", "☆", "启动", "无效"]:
                             subchild.config(bg=self.colors['hover_bg'])
                     except:
                         pass
@@ -252,7 +266,7 @@ class RecentItem(tk.Frame):
                 child.config(bg=self.colors['card_bg'])
                 for subchild in child.winfo_children():
                     try:
-                        if subchild.cget("text") not in ["📂", "★", "☆", "启动"]:
+                        if subchild.cget("text") not in ["📂", "★", "☆", "启动", "无效"]:
                             subchild.config(bg=self.colors['card_bg'])
                     except:
                         pass
@@ -433,7 +447,9 @@ class ClaudeLauncher:
         self.root.resizable(False, False)
 
         self.config_file = Path.home() / ".claude_launcher_config.json"
+        self.config_warning = None
         self.load_config()
+        self.last_mode = self.config.get("last_mode", "normal")
 
         # 初始化主题
         self.current_theme = self.config.get("theme", "auto")
@@ -453,15 +469,15 @@ class ClaudeLauncher:
         self.tray_icon = None
         self.setup_tray()
 
+        self.validation_job = None
+        self.path_status = None
+
         self.setup_ui()
 
         # 绑定快捷键
         self.root.bind('<Return>', lambda e: self.launch_claude())
         self.root.bind('<Escape>', lambda e: self.minimize_to_tray())
         self.root.bind('<Control-o>', lambda e: self.browse_directory())
-
-        self.validation_job = None
-        self.path_status = None
 
     def get_system_theme(self):
         """检测 Windows 系统主题"""
@@ -590,21 +606,99 @@ class ClaudeLauncher:
         sys.exit(0)
 
     def load_config(self):
-        if self.config_file.exists():
+        default_config = {
+            "recent_dirs": [],
+            "favorites": [],
+            "last_mode": "normal",
+            "auto_close": True,
+            "theme": "auto"
+        }
+
+        self.config = default_config.copy()
+
+        if not self.config_file.exists():
+            return
+
+        try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
-                self.config = json.load(f)
-        else:
-            self.config = {
-                "recent_dirs": [],
-                "favorites": [],
-                "last_mode": "normal",
-                "auto_close": True,
-                "theme": "auto"
-            }
+                loaded_config = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            self.config_warning = "配置文件无法读取，已使用默认设置"
+            return
+
+        if not isinstance(loaded_config, dict):
+            self.config_warning = "配置文件格式无效，已使用默认设置"
+            return
+
+        self.config.update(loaded_config)
+        self.config["recent_dirs"] = self.normalize_path_list(self.config.get("recent_dirs", []))
+        self.config["favorites"] = self.normalize_path_list(self.config.get("favorites", []))
+
+        if self.config.get("last_mode") not in ("normal", "skip"):
+            self.config["last_mode"] = "normal"
+        if self.config.get("theme") not in ("auto", "light", "dark"):
+            self.config["theme"] = "auto"
+        if not isinstance(self.config.get("auto_close"), bool):
+            self.config["auto_close"] = True
 
     def save_config(self):
         with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
+
+    def normalize_path(self, path):
+        """清理用户粘贴的目录路径，兼容 Windows 的“复制为路径”格式。"""
+        if not path:
+            return ""
+
+        normalized = str(path).strip()
+        if len(normalized) >= 2 and normalized[0] == normalized[-1] and normalized[0] in ("'", '"'):
+            normalized = normalized[1:-1].strip()
+
+        normalized = os.path.expandvars(os.path.expanduser(normalized))
+        if not normalized:
+            return ""
+
+        return os.path.normpath(normalized)
+
+    def normalize_path_list(self, paths):
+        if not isinstance(paths, list):
+            return []
+
+        normalized_paths = []
+        for path in paths:
+            normalized = self.normalize_path(path)
+            if normalized and normalized not in normalized_paths:
+                normalized_paths.append(normalized)
+
+        return normalized_paths[:10]
+
+    def is_valid_directory(self, path):
+        return bool(path) and os.path.isdir(self.normalize_path(path))
+
+    def first_available_directory(self, paths):
+        for path in paths:
+            normalized = self.normalize_path(path)
+            if os.path.isdir(normalized):
+                return normalized
+        return ""
+
+    def resolve_claude_command(self):
+        return shutil.which("claude") or shutil.which("claude.exe") or shutil.which("claude.cmd")
+
+    def build_claude_command(self, mode):
+        claude_command = self.resolve_claude_command()
+        if not claude_command:
+            return None
+
+        if claude_command.lower().endswith((".cmd", ".bat")):
+            cmd = [os.environ.get("COMSPEC", "cmd.exe"), "/c", claude_command]
+        else:
+            cmd = [claude_command]
+
+        if mode == "skip":
+            cmd.append("--dangerously-skip-permissions")
+
+        return cmd
 
     def setup_ui(self):
         # 主容器
@@ -650,7 +744,10 @@ class ClaudeLauncher:
         settings_btn.bind("<Button-1>", lambda e: self.open_settings())
 
         # 状态栏（移到顶部标题栏下方）
-        self.status_var = tk.StringVar(value="准备就绪")
+        initial_status = self.config_warning or "准备就绪"
+        if not self.config_warning and not self.resolve_claude_command():
+            initial_status = "未找到 claude 命令，请先安装 Claude Code 并确认 PATH 可用"
+        self.status_var = tk.StringVar(value=initial_status)
         status_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=28)
         status_bar.pack(fill=tk.X)
         status_bar.pack_propagate(False)
@@ -820,9 +917,12 @@ class ClaudeLauncher:
                                          padx=6)
         self.path_status_label.pack(side=tk.RIGHT, padx=(0, 4))
 
-        # 设置初始值
-        if self.config.get("recent_dirs"):
-            self.dir_var.set(self.config["recent_dirs"][0])
+        # 设置初始值：只自动选中本机真实存在的目录
+        initial_dir = self.first_available_directory(self.config.get("recent_dirs", []))
+        if initial_dir:
+            self.dir_var.set(initial_dir)
+        elif self.config.get("recent_dirs"):
+            self.set_status("最近目录不在这台电脑上，请点击浏览选择本机目录", "warning")
 
         # 按钮容器
         button_container = tk.Frame(dir_input_container, bg=self.colors['input_bg'])
@@ -874,6 +974,7 @@ class ClaudeLauncher:
             recent_container.pack(fill=tk.X)
 
             for i, recent_path in enumerate(self.config.get("recent_dirs", [])[:5]):
+                recent_available = os.path.isdir(recent_path)
                 recent_item = RecentItem(
                     recent_container,
                     recent_path,
@@ -883,6 +984,7 @@ class ClaudeLauncher:
                     self.toggle_favorite,
                     recent_path in self.config.get("favorites", []),
                     self.colors,
+                    recent_available,
                 )
                 recent_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
 
@@ -908,6 +1010,7 @@ class ClaudeLauncher:
             fav_container.pack(fill=tk.X)
 
             for i, fav_path in enumerate(self.config.get("favorites", [])[:5]):
+                fav_available = os.path.isdir(fav_path)
                 fav_item = RecentItem(
                     fav_container,
                     fav_path,
@@ -917,6 +1020,7 @@ class ClaudeLauncher:
                     self.toggle_favorite,
                     True,
                     self.colors,
+                    fav_available,
                 )
                 fav_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
 
@@ -972,8 +1076,9 @@ class ClaudeLauncher:
     def browse_directory(self):
         directory = filedialog.askdirectory(title="选择工作目录")
         if directory:
-            self.dir_var.set(directory)
-            self.set_status(f"已选择目录: {directory}")
+            normalized = self.normalize_path(directory)
+            self.dir_var.set(normalized)
+            self.set_status(f"已选择目录: {normalized}")
 
     def open_settings(self):
         """打开设置对话框"""
@@ -990,7 +1095,7 @@ class ClaudeLauncher:
         self.status_label.config(fg=color_map.get(tone, self.colors['text_secondary']))
 
     def update_current_directory_card(self):
-        path = self.dir_var.get().strip()
+        path = self.normalize_path(self.dir_var.get())
         mode_text = "上次启动：跳过权限" if getattr(self, 'last_mode', 'normal') == "skip" else "上次启动：普通模式"
         self.current_mode_chip.config(text=mode_text)
 
@@ -1022,13 +1127,18 @@ class ClaudeLauncher:
         self.validation_job = self.root.after(150, self.validate_path)
 
     def validate_path(self):
-        path = self.dir_var.get().strip()
+        raw_path = self.dir_var.get()
+        path = self.normalize_path(raw_path)
         self.validation_job = None
 
         if not path:
             self.path_status = None
             self.path_status_label.config(text="未输入", fg=self.colors['text_secondary'])
             self.update_current_directory_card()
+            return
+
+        if path != raw_path.strip():
+            self.dir_var.set(path)
             return
 
         if os.path.isdir(path):
@@ -1041,29 +1151,35 @@ class ClaudeLauncher:
         self.update_current_directory_card()
 
     def open_in_explorer(self):
-        self.open_path_in_explorer(self.dir_var.get().strip())
+        self.open_path_in_explorer(self.dir_var.get())
 
     def open_path_in_explorer(self, path):
+        path = self.normalize_path(path)
         if not path:
             messagebox.showwarning("提示", "请先输入或选择一个目录")
             return
 
-        if not os.path.exists(path):
-            messagebox.showerror("错误", "目录不存在")
+        if not os.path.isdir(path):
+            messagebox.showerror("错误", f"目录不存在或不是文件夹:\n{path}")
             return
 
         try:
-            subprocess.Popen(f'explorer "{path}"')
+            subprocess.Popen(["explorer", path])
             self.set_status(f"已在资源管理器中打开: {path}", "success")
         except Exception as e:
             messagebox.showerror("错误", f"打开失败: {str(e)}")
             self.set_status("打开资源管理器失败", "error")
 
     def launch_from_path(self, path):
-        self.dir_var.set(path)
+        self.dir_var.set(self.normalize_path(path))
         self.launch_claude(self.last_mode)
 
     def toggle_favorite(self, path):
+        path = self.normalize_path(path)
+        if not path:
+            messagebox.showwarning("提示", "请先选择一个目录")
+            return
+
         favorites = self.config.setdefault("favorites", [])
         if path in favorites:
             favorites.remove(path)
@@ -1076,21 +1192,25 @@ class ClaudeLauncher:
         self.rebuild_ui()
 
     def select_recent(self, path):
-        self.dir_var.set(path)
-        self.set_status(f"已选中目录: {path}")
+        normalized = self.normalize_path(path)
+        self.dir_var.set(normalized)
+        if os.path.isdir(normalized):
+            self.set_status(f"已选中目录: {normalized}")
+        else:
+            self.set_status("该历史目录在这台电脑上不存在，请重新选择目录", "warning")
 
     def select_favorite(self, path):
-        self.dir_var.set(path)
+        self.dir_var.set(self.normalize_path(path))
         self.launch_claude(self.last_mode)
 
     def add_to_favorites(self):
-        path = self.dir_var.get().strip()
+        path = self.normalize_path(self.dir_var.get())
         if not path:
             messagebox.showwarning("提示", "请先选择一个目录")
             return
 
-        if not os.path.exists(path):
-            messagebox.showerror("错误", "目录不存在")
+        if not os.path.isdir(path):
+            messagebox.showerror("错误", f"目录不存在或不是文件夹:\n{path}")
             return
 
         if path in self.config.setdefault("favorites", []):
@@ -1118,15 +1238,22 @@ class ClaudeLauncher:
             self.set_status("历史记录已清除", "info")
 
     def launch_claude(self, mode=None):
-        work_dir = self.dir_var.get().strip()
+        work_dir = self.normalize_path(self.dir_var.get())
         selected_mode = mode or self.last_mode
 
         if not work_dir:
             messagebox.showerror("错误", "请选择或输入工作目录")
             return
 
-        if not os.path.exists(work_dir):
-            messagebox.showerror("错误", f"目录不存在: {work_dir}")
+        if not os.path.isdir(work_dir):
+            messagebox.showerror("错误", f"目录不存在或不是文件夹:\n{work_dir}\n\n请点击“浏览”选择这台电脑上的项目目录。")
+            self.set_status("目录无效，请选择本机存在的项目目录", "error")
+            return
+
+        cmd = self.build_claude_command(selected_mode)
+        if not cmd:
+            messagebox.showerror("错误", "找不到 claude 命令。\n\n请先安装 Claude Code，并确认在 PowerShell 中运行 claude --version 正常。")
+            self.set_status("未找到 claude 命令，请检查 Claude Code 安装和 PATH", "error")
             return
 
         if work_dir not in self.config["recent_dirs"]:
@@ -1141,10 +1268,6 @@ class ClaudeLauncher:
         self.config["auto_close"] = self.auto_close_var.get()
         self.save_config()
         self.update_current_directory_card()
-
-        cmd = ["claude"]
-        if selected_mode == "skip":
-            cmd.append("--dangerously-skip-permissions")
 
         try:
             subprocess.Popen(
