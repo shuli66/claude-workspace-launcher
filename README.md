@@ -9,7 +9,7 @@
 
 ## 📸 界面预览
 
-![Claude Launcher 界面展示](./展示.png)
+![AI Coding Launcher 界面展示](./展示.png)
 
 ---
 
