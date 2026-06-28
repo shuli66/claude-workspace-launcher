@@ -271,6 +271,92 @@ class RecentItem(tk.Frame):
                     except:
                         pass
 
+class FolderGroup(tk.Frame):
+    """可折叠的文件夹分组控件，按父目录分组显示子目录"""
+    def __init__(self, parent, folder_path, children, on_select, on_launch,
+                 on_open_explorer, on_toggle_favorite, favorites, colors):
+        super().__init__(parent, bg=colors['bg'])
+        self.folder_path = folder_path
+        self.children = children
+        self.colors = colors
+        self.is_expanded = True
+
+        # 分组标题栏
+        header = tk.Frame(self, bg=colors['card_bg'], height=40)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+
+        # 展开/折叠箭头
+        self.arrow_label = tk.Label(header, text="▾", font=("Segoe UI", 10),
+                                   bg=colors['card_bg'], fg=colors['text_secondary'],
+                                   cursor="hand2", padx=4)
+        self.arrow_label.pack(side=tk.LEFT, padx=(12, 0))
+
+        # 文件夹图标和名称
+        folder_name = os.path.basename(folder_path) or folder_path
+        icon_label = tk.Label(header, text="📂", font=("Segoe UI", 12),
+                             bg=colors['card_bg'], fg=colors['accent'])
+        icon_label.pack(side=tk.LEFT, padx=(4, 8))
+
+        name_label = tk.Label(header, text=folder_name, font=("Segoe UI", 10, "bold"),
+                             bg=colors['card_bg'], fg=colors['text'])
+        name_label.pack(side=tk.LEFT)
+
+        # 完整路径
+        path_label = tk.Label(header, text=folder_path, font=("Segoe UI", 8),
+                             bg=colors['card_bg'], fg=colors['text_secondary'])
+        path_label.pack(side=tk.LEFT, padx=(8, 0))
+
+        # 子项数量
+        count_label = tk.Label(header, text=f"{len(children)} 个项目",
+                              font=("Segoe UI", 8),
+                              bg=colors['card_bg'], fg=colors['text_secondary'])
+        count_label.pack(side=tk.RIGHT, padx=12)
+
+        # 在资源管理器中打开父目录
+        open_parent_btn = tk.Label(header, text="📂", font=("Segoe UI", 11),
+                                  bg=colors['card_bg'], fg=colors['text'],
+                                  cursor="hand2", padx=6)
+        open_parent_btn.pack(side=tk.RIGHT, padx=(0, 4))
+        open_parent_btn.bind("<Enter>", lambda e: open_parent_btn.config(bg=colors['hover_bg']))
+        open_parent_btn.bind("<Leave>", lambda e: open_parent_btn.config(bg=colors['card_bg']))
+        open_parent_btn.bind("<Button-1>", lambda e: on_open_explorer(folder_path))
+
+        # 绑定点击事件（折叠/展开）
+        for widget in [header, self.arrow_label, icon_label, name_label, path_label]:
+            widget.bind("<Button-1>", lambda e: self.toggle_expand())
+            widget.bind("<Enter>", lambda e: header.config(bg=colors['hover_bg']))
+            widget.bind("<Leave>", lambda e: header.config(bg=colors['card_bg']))
+
+        # 子项容器
+        self.children_frame = tk.Frame(self, bg=colors['bg'])
+        self.children_frame.pack(fill=tk.X)
+
+        # 渲染子项
+        for i, child_path in enumerate(children):
+            child_available = os.path.isdir(child_path)
+            item = RecentItem(
+                self.children_frame,
+                child_path,
+                on_select,
+                on_launch,
+                on_open_explorer,
+                on_toggle_favorite,
+                child_path in favorites,
+                colors,
+                child_available,
+            )
+            item.pack(fill=tk.X, pady=(0, 1))
+
+    def toggle_expand(self):
+        if self.is_expanded:
+            self.children_frame.pack_forget()
+            self.arrow_label.config(text="▸")
+        else:
+            self.children_frame.pack(fill=tk.X, after=self.winfo_children()[0])
+            self.arrow_label.config(text="▾")
+        self.is_expanded = not self.is_expanded
+
 class SettingsDialog:
     """设置对话框"""
     def __init__(self, parent, launcher):
@@ -438,18 +524,67 @@ class SettingsDialog:
         self.dialog.destroy()
         self.launcher.quit_app()
 
+AGENT_CONFIGS = {
+    "claude": {
+        "name": "Claude Code",
+        "icon": "⚡",
+        "commands": ["claude", "claude.exe", "claude.cmd"],
+        "modes": {
+            "normal": {"label": "普通启动", "desc": "标准权限确认流程", "args": []},
+            "skip": {"label": "跳过权限启动", "desc": "快速启动，跳过权限提示", "args": ["--dangerously-skip-permissions"]},
+        },
+        "resume_args": ["--resume"],
+        "default_mode": "normal",
+        "env_key": None,
+        "session_dir": os.path.join(Path.home(), ".claude", "projects"),
+        "session_pattern": "*.jsonl",
+    },
+    "codex": {
+        "name": "Codex CLI",
+        "icon": "🤖",
+        "commands": ["codex", "codex.exe"],
+        "modes": {
+            "normal": {"label": "沙箱启动", "desc": "标准沙箱模式（推荐日常使用）", "args": ["--sandbox", "workspace-write"]},
+            "yolo": {"label": "YOLO 模式", "desc": "跳过所有审批和沙箱（仅限隔离环境）", "args": ["--dangerously-bypass-approvals-and-sandbox"]},
+        },
+        "resume_args": ["resume"],
+        "default_mode": "normal",
+        "env_key": "OPENAI_API_KEY",
+        "session_dir": os.path.join(Path.home(), ".codex", "sessions"),
+        "session_pattern": "rollout-*.jsonl",
+    },
+    "mimo": {
+        "name": "MiMo Code",
+        "icon": "🧠",
+        "commands": ["mimo", "mimo.exe", "mimo.cmd"],
+        "modes": {
+            "interactive": {"label": "交互模式", "desc": "启动 TUI 交互界面（推荐）", "args": []},
+            "run": {"label": "单次执行", "desc": "执行单个任务后退出（适合脚本/CI）", "args": ["run"]},
+        },
+        "resume_args": ["--continue"],
+        "default_mode": "interactive",
+        "env_key": "MIMO_API_KEY",
+        "session_dir": os.path.join(Path.home(), ".local", "share", "mimocode"),
+        "session_pattern": "mimocode.db",
+    },
+}
+
+
 class ClaudeLauncher:
     def __init__(self, root, lock_socket=None):
         self.root = root
         self.lock_socket = lock_socket
-        self.root.title("Claude Code Launcher")
-        self.root.geometry("700x780")
+        self.root.title("AI Coding Launcher")
+        self.root.geometry("700x820")
         self.root.resizable(False, False)
 
         self.config_file = Path.home() / ".claude_launcher_config.json"
         self.config_warning = None
         self.load_config()
-        self.last_mode = self.config.get("last_mode", "normal")
+        self.current_agent = self.config.get("agent", "claude")
+        if self.current_agent not in AGENT_CONFIGS:
+            self.current_agent = "claude"
+        self.last_mode = self.config.get("last_mode", AGENT_CONFIGS[self.current_agent]["default_mode"])
 
         # 初始化主题
         self.current_theme = self.config.get("theme", "auto")
@@ -475,7 +610,7 @@ class ClaudeLauncher:
         self.setup_ui()
 
         # 绑定快捷键
-        self.root.bind('<Return>', lambda e: self.launch_claude())
+        self.root.bind('<Return>', lambda e: self.launch_agent())
         self.root.bind('<Escape>', lambda e: self.minimize_to_tray())
         self.root.bind('<Control-o>', lambda e: self.browse_directory())
 
@@ -609,6 +744,7 @@ class ClaudeLauncher:
         default_config = {
             "recent_dirs": [],
             "favorites": [],
+            "agent": "claude",
             "last_mode": "normal",
             "auto_close": True,
             "theme": "auto"
@@ -634,8 +770,10 @@ class ClaudeLauncher:
         self.config["recent_dirs"] = self.normalize_path_list(self.config.get("recent_dirs", []))
         self.config["favorites"] = self.normalize_path_list(self.config.get("favorites", []))
 
-        if self.config.get("last_mode") not in ("normal", "skip"):
-            self.config["last_mode"] = "normal"
+        if self.config.get("agent") not in AGENT_CONFIGS:
+            self.config["agent"] = "claude"
+        if self.config.get("last_mode") not in AGENT_CONFIGS.get(self.config.get("agent", "claude"), {}).get("modes", {}):
+            self.config["last_mode"] = AGENT_CONFIGS[self.config["agent"]]["default_mode"]
         if self.config.get("theme") not in ("auto", "light", "dark"):
             self.config["theme"] = "auto"
         if not isinstance(self.config.get("auto_close"), bool):
@@ -682,21 +820,325 @@ class ClaudeLauncher:
                 return normalized
         return ""
 
-    def resolve_claude_command(self):
-        return shutil.which("claude") or shutil.which("claude.exe") or shutil.which("claude.cmd")
+    def scan_agent_sessions(self, agent=None):
+        """扫描指定 agent 的会话目录，返回按项目分组的会话列表"""
+        agent = agent or self.current_agent
+        config = AGENT_CONFIGS[agent]
+        session_dir = config.get("session_dir", "")
+        if not session_dir or not os.path.isdir(session_dir):
+            return []
 
-    def build_claude_command(self, mode):
-        claude_command = self.resolve_claude_command()
-        if not claude_command:
+        if agent == "claude":
+            return self._scan_claude_sessions(session_dir)
+        elif agent == "codex":
+            return self._scan_codex_sessions(session_dir)
+        elif agent == "mimo":
+            return self._scan_mimo_sessions(session_dir)
+        return []
+
+    def _scan_claude_sessions(self, session_dir):
+        """扫描 Claude Code 会话：~/.claude/projects/<project>/<session>.jsonl"""
+        from collections import OrderedDict
+        import glob as globmod
+
+        groups = OrderedDict()
+        if not os.path.isdir(session_dir):
+            return list(groups.items())
+
+        for project_dir in os.listdir(session_dir):
+            project_path = os.path.join(session_dir, project_dir)
+            if not os.path.isdir(project_path):
+                continue
+
+            session_files = globmod.glob(os.path.join(project_path, "*.jsonl"))
+            if not session_files:
+                continue
+
+            sessions = []
+            for sf in sorted(session_files, key=os.path.getmtime, reverse=True)[:5]:
+                session_id = os.path.splitext(os.path.basename(sf))[0]
+                mtime = os.path.getmtime(sf)
+                # 从 JSONL 读取真实 cwd 路径
+                real_cwd = self._extract_cwd_from_claude_jsonl(sf)
+                if not real_cwd or not os.path.isdir(real_cwd):
+                    continue
+                prompt = self._extract_first_prompt_claude(sf)
+                sessions.append({
+                    "id": session_id,
+                    "file": sf,
+                    "mtime": mtime,
+                    "size": os.path.getsize(sf),
+                    "prompt": prompt,
+                    "cwd": real_cwd,
+                })
+
+            # 使用真实路径作为分组键（取第一个会话的 cwd）
+            if sessions:
+                real_path = sessions[0].get("cwd", project_dir)
+                if real_path not in groups:
+                    groups[real_path] = []
+                groups[real_path].extend(sessions)
+
+        return list(groups.items())
+
+    def _extract_cwd_from_claude_jsonl(self, jsonl_file):
+        """从 Claude Code JSONL 文件提取 cwd 字段"""
+        try:
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        if "cwd" in obj:
+                            return obj["cwd"]
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+        return ""
+
+    def _extract_first_prompt_claude(self, jsonl_file):
+        """从 Claude Code JSONL 文件提取第一个用户消息"""
+        try:
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        if obj.get("type") == "user":
+                            msg = obj.get("message", {})
+                            content = msg.get("content", "")
+                            if isinstance(content, str) and content:
+                                return content[:80]
+                            elif isinstance(content, list):
+                                for block in content:
+                                    if isinstance(block, dict) and block.get("type") == "text":
+                                        text = block.get("text", "")
+                                        if text:
+                                            return text[:80]
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+        return ""
+
+    def _scan_codex_sessions(self, session_dir):
+        """扫描 Codex CLI 会话：~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl"""
+        from collections import OrderedDict
+        import glob as globmod
+
+        groups = OrderedDict()
+        if not os.path.isdir(session_dir):
+            return list(groups.items())
+
+        all_sessions = []
+        for date_dir in sorted(os.listdir(session_dir), reverse=True)[:30]:
+            date_path = os.path.join(session_dir, date_dir)
+            if not os.path.isdir(date_path):
+                continue
+
+            for month_dir in os.listdir(date_path):
+                month_path = os.path.join(date_path, month_dir)
+                if not os.path.isdir(month_path):
+                    continue
+
+                for day_dir in os.listdir(month_path):
+                    day_path = os.path.join(month_path, day_dir)
+                    if not os.path.isdir(day_path):
+                        continue
+
+                    rollout_files = globmod.glob(os.path.join(day_path, "rollout-*.jsonl"))
+                    for rf in sorted(rollout_files, key=os.path.getmtime, reverse=True):
+                        session_id = os.path.splitext(os.path.basename(rf))[0]
+                        mtime = os.path.getmtime(rf)
+                        date_str = f"{date_dir}/{month_dir}/{day_dir}"
+                        # 从 rollout 文件提取 cwd
+                        real_cwd = self._extract_cwd_from_codex_rollout(rf)
+                        prompt = self._extract_first_prompt_codex(rf)
+                        all_sessions.append({
+                            "id": session_id,
+                            "file": rf,
+                            "mtime": mtime,
+                            "date": date_str,
+                            "size": os.path.getsize(rf),
+                            "prompt": prompt,
+                            "cwd": real_cwd or "",
+                        })
+
+        # 按日期分组，过滤无 cwd 的会话
+        for session in all_sessions[:20]:
+            date_str = session.get("date", "未知日期")
+            if date_str not in groups:
+                groups[date_str] = []
+            groups[date_str].append(session)
+
+        return list(groups.items())
+
+    def _extract_cwd_from_codex_rollout(self, jsonl_file):
+        """从 Codex rollout JSONL 提取 cwd"""
+        try:
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        # 尝试多种可能的字段
+                        for key in ["cwd", "working_directory", "workdir", "directory"]:
+                            if key in obj:
+                                return obj[key]
+                        # 检查 payload 中的 cwd
+                        payload = obj.get("payload", {})
+                        if isinstance(payload, dict):
+                            for key in ["cwd", "working_directory", "workdir", "directory"]:
+                                if key in payload:
+                                    return payload[key]
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+        return ""
+
+    def _extract_first_prompt_codex(self, jsonl_file):
+        """从 Codex CLI rollout JSONL 提取第一个用户消息"""
+        try:
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        # Codex rollout 格式可能有不同结构
+                        role = obj.get("role", "")
+                        if role == "user":
+                            content = obj.get("content", obj.get("message", ""))
+                            if isinstance(content, str) and content:
+                                return content[:80]
+                            elif isinstance(content, list):
+                                for block in content:
+                                    if isinstance(block, dict) and block.get("type") == "text":
+                                        text = block.get("text", "")
+                                        if text:
+                                            return text[:80]
+                        # 尝试其他可能的字段
+                        prompt = obj.get("prompt", obj.get("input", ""))
+                        if isinstance(prompt, str) and prompt:
+                            return prompt[:80]
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+        return ""
+
+    def _scan_mimo_sessions(self, session_dir):
+        """扫描 MiMo Code 会话：从 ~/.local/share/mimocode/mimocode.db 读取"""
+        from collections import OrderedDict
+
+        groups = OrderedDict()
+        db_file = os.path.join(session_dir, "mimocode.db")
+
+        if not os.path.isfile(db_file):
+            return list(groups.items())
+
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db_file)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # 查询会话表，关联项目表获取工作目录
+            cursor.execute("""
+                SELECT
+                    s.id,
+                    s.directory,
+                    s.title,
+                    s.time_created,
+                    s.time_updated,
+                    p.worktree
+                FROM session s
+                LEFT JOIN project p ON s.project_id = p.id
+                ORDER BY s.time_updated DESC
+                LIMIT 30
+            """)
+
+            rows = cursor.fetchall()
+            for row in rows:
+                # 优先使用 session 的 directory，否则用 project 的 worktree
+                cwd = row["directory"] or row["worktree"] or ""
+                if not cwd or not os.path.isdir(cwd):
+                    continue
+
+                session_id = row["id"] or "unknown"
+                title = row["title"] or ""
+                time_created = row["time_created"] or 0
+
+                # 将时间戳转换为可读格式
+                created_str = ""
+                if time_created:
+                    from datetime import datetime
+                    try:
+                        # MiMo 使用毫秒时间戳
+                        dt = datetime.fromtimestamp(time_created / 1000 if time_created > 1e12 else time_created)
+                        created_str = dt.strftime("%m-%d %H:%M")
+                    except (ValueError, OSError):
+                        pass
+
+                # 处理标题编码问题（尝试修复乱码）
+                if title:
+                    try:
+                        # 尝试用不同编码解码
+                        title = title.encode('latin1').decode('utf-8', errors='replace')
+                    except (UnicodeDecodeError, UnicodeEncodeError):
+                        pass
+
+                if cwd not in groups:
+                    groups[cwd] = []
+                groups[cwd].append({
+                    "id": session_id[:12],
+                    "cwd": cwd,
+                    "title": title[:50] if title else "",
+                    "created": created_str,
+                    "prompt": title[:50] if title else "",
+                })
+
+            conn.close()
+        except Exception:
+            pass
+
+        return list(groups.items())
+
+    def resolve_agent_command(self, agent=None):
+        agent = agent or self.current_agent
+        config = AGENT_CONFIGS[agent]
+        for cmd in config["commands"]:
+            found = shutil.which(cmd)
+            if found:
+                return found
+        return None
+
+    def build_agent_command(self, mode, agent=None):
+        agent = agent or self.current_agent
+        config = AGENT_CONFIGS[agent]
+        cmd_path = self.resolve_agent_command(agent)
+        if not cmd_path:
             return None
 
-        if claude_command.lower().endswith((".cmd", ".bat")):
-            cmd = [os.environ.get("COMSPEC", "cmd.exe"), "/c", claude_command]
-        else:
-            cmd = [claude_command]
+        if mode not in config["modes"]:
+            return None
 
-        if mode == "skip":
-            cmd.append("--dangerously-skip-permissions")
+        if cmd_path.lower().endswith((".cmd", ".bat")):
+            cmd = [os.environ.get("COMSPEC", "cmd.exe"), "/c", cmd_path]
+        else:
+            cmd = [cmd_path]
+
+        mode_args = config["modes"][mode]["args"]
+        cmd.extend(mode_args)
 
         return cmd
 
@@ -714,14 +1156,15 @@ class ClaudeLauncher:
         header_content.pack(expand=True)
 
         # Logo 和标题
-        logo_label = tk.Label(header_content, text="⚡", font=("Segoe UI", 24),
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        logo_label = tk.Label(header_content, text=agent_config["icon"], font=("Segoe UI", 24),
                              bg=self.colors['card_bg'], fg=self.colors['accent'])
         logo_label.pack(side=tk.LEFT, padx=(0, 12))
 
         title_frame = tk.Frame(header_content, bg=self.colors['card_bg'])
         title_frame.pack(side=tk.LEFT)
 
-        title_label = tk.Label(title_frame, text="Claude Code",
+        title_label = tk.Label(title_frame, text=agent_config["name"],
                               font=("Segoe UI", 16, "bold"),
                               bg=self.colors['card_bg'], fg=self.colors['text'])
         title_label.pack(anchor=tk.W)
@@ -743,10 +1186,44 @@ class ClaudeLauncher:
         settings_btn.bind("<Leave>", lambda e: settings_btn.config(fg=self.colors['text_secondary']))
         settings_btn.bind("<Button-1>", lambda e: self.open_settings())
 
+        # Agent 选择器
+        agent_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=44)
+        agent_bar.pack(fill=tk.X)
+        agent_bar.pack_propagate(False)
+
+        agent_inner = tk.Frame(agent_bar, bg=self.colors['card_bg'])
+        agent_inner.pack(expand=True, padx=16)
+
+        agent_label = tk.Label(agent_inner, text="工具:",
+                              font=("Segoe UI", 9),
+                              bg=self.colors['card_bg'], fg=self.colors['text_secondary'])
+        agent_label.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.agent_buttons = {}
+        for agent_id, cfg in AGENT_CONFIGS.items():
+            is_active = (agent_id == self.current_agent)
+            btn_bg = self.colors['accent'] if is_active else self.colors['border']
+            btn_fg = '#ffffff' if is_active else self.colors['text']
+
+            btn = tk.Label(agent_inner, text=f" {cfg['icon']} {cfg['name']} ",
+                          font=("Segoe UI", 9, "bold" if is_active else "normal"),
+                          bg=btn_bg, fg=btn_fg, cursor="hand2", padx=10, pady=4)
+            btn.pack(side=tk.LEFT, padx=(0, 6))
+            btn.bind("<Button-1>", lambda e, a=agent_id: self.switch_agent(a))
+
+            # 检测可用状态
+            available = self.resolve_agent_command(agent_id) is not None
+            if not available:
+                btn.config(fg=self.colors['danger'] if not is_active else btn_fg)
+
+            self.agent_buttons[agent_id] = btn
+
         # 状态栏（移到顶部标题栏下方）
         initial_status = self.config_warning or "准备就绪"
-        if not self.config_warning and not self.resolve_claude_command():
-            initial_status = "未找到 claude 命令，请先安装 Claude Code 并确认 PATH 可用"
+        if not self.config_warning and not self.resolve_agent_command():
+            env_key = AGENT_CONFIGS[self.current_agent].get("env_key")
+            hint = f"，并确认 {env_key} 已设置" if env_key else ""
+            initial_status = f"未找到 {AGENT_CONFIGS[self.current_agent]['name']} 命令，请先安装{hint}"
         self.status_var = tk.StringVar(value=initial_status)
         status_bar = tk.Frame(main_frame, bg=self.colors['card_bg'], height=28)
         status_bar.pack(fill=tk.X)
@@ -829,39 +1306,17 @@ class ClaudeLauncher:
                                            bg=self.colors['border'], fg=self.colors['text_secondary'])
         self.current_status_chip.pack(side=tk.LEFT, padx=(0, 8))
 
-        self.current_mode_chip = tk.Label(current_meta, text="上次启动：普通模式",
-                                         font=("Segoe UI", 8), padx=8, pady=3,
-                                         bg=self.colors['border'], fg=self.colors['text_secondary'])
+        self.current_mode_chip = tk.Label(current_meta, text="",
+                                          font=("Segoe UI", 8), padx=8, pady=3,
+                                          bg=self.colors['border'], fg=self.colors['text_secondary'])
         self.current_mode_chip.pack(side=tk.LEFT)
 
         current_actions = tk.Frame(current_inner, bg=self.colors['card_bg'])
         current_actions.pack(fill=tk.X, pady=(12, 0))
 
-        current_normal_btn = ModernButton(
-            current_actions,
-            "普通启动",
-            lambda: self.launch_claude("normal"),
-            self.colors['accent'],
-            self.colors['accent_hover'],
-            '#ffffff',
-            width=220,
-            height=40,
-            icon="▶"
-        )
-        current_normal_btn.pack(side=tk.LEFT)
-
-        current_skip_btn = ModernButton(
-            current_actions,
-            "跳过权限启动",
-            lambda: self.launch_claude("skip"),
-            '#9a3412',
-            '#c2410c',
-            '#ffffff',
-            width=220,
-            height=40,
-            icon="⚠"
-        )
-        current_skip_btn.pack(side=tk.LEFT, padx=(10, 0))
+        # 根据当前 agent 动态生成启动按钮
+        self.launch_buttons_frame = current_actions
+        self.rebuild_launch_buttons()
 
         current_icon_actions = tk.Frame(current_actions, bg=self.colors['card_bg'])
         current_icon_actions.pack(side=tk.RIGHT)
@@ -952,41 +1407,35 @@ class ClaudeLauncher:
         open_btn.bind("<Leave>", lambda e: open_btn.config(bg=self.colors['border']))
         open_btn.bind("<Button-1>", lambda e: self.open_in_explorer())
 
-        # 最近目录
-        if self.config.get("recent_dirs"):
-            recent_section = tk.Frame(content_inner, bg=self.colors['bg'])
-            recent_section.pack(fill=tk.X, pady=(0, 16))
+        # Agent 会话列表（从实际会话目录读取）
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        session_groups = self.scan_agent_sessions()
 
-            recent_header = tk.Frame(recent_section, bg=self.colors['bg'])
-            recent_header.pack(fill=tk.X, pady=(0, 8))
+        if session_groups:
+            session_section = tk.Frame(content_inner, bg=self.colors['bg'])
+            session_section.pack(fill=tk.X, pady=(0, 16))
 
-            recent_label = tk.Label(recent_header, text="最近目录",
-                                   font=("Segoe UI", 10, "bold"),
-                                   bg=self.colors['bg'], fg=self.colors['text'])
-            recent_label.pack(side=tk.LEFT)
+            session_header = tk.Frame(session_section, bg=self.colors['bg'])
+            session_header.pack(fill=tk.X, pady=(0, 8))
 
-            recent_count = tk.Label(recent_header, text=f"{min(len(self.config['recent_dirs']), 5)} 项",
-                                   font=("Segoe UI", 9),
-                                   bg=self.colors['bg'], fg=self.colors['text_secondary'])
-            recent_count.pack(side=tk.LEFT, padx=(8, 0))
+            session_label = tk.Label(session_header,
+                                    text=f"{agent_config['name']} 会话",
+                                    font=("Segoe UI", 10, "bold"),
+                                    bg=self.colors['bg'], fg=self.colors['text'])
+            session_label.pack(side=tk.LEFT)
 
-            recent_container = tk.Frame(recent_section, bg=self.colors['bg'])
-            recent_container.pack(fill=tk.X)
+            total_sessions = sum(len(sessions) for _, sessions in session_groups)
+            session_count = tk.Label(session_header,
+                                    text=f"{len(session_groups)} 个项目, {total_sessions} 个会话",
+                                    font=("Segoe UI", 9),
+                                    bg=self.colors['bg'], fg=self.colors['text_secondary'])
+            session_count.pack(side=tk.LEFT, padx=(8, 0))
 
-            for i, recent_path in enumerate(self.config.get("recent_dirs", [])[:5]):
-                recent_available = os.path.isdir(recent_path)
-                recent_item = RecentItem(
-                    recent_container,
-                    recent_path,
-                    self.select_recent,
-                    self.launch_from_path,
-                    self.open_path_in_explorer,
-                    self.toggle_favorite,
-                    recent_path in self.config.get("favorites", []),
-                    self.colors,
-                    recent_available,
-                )
-                recent_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
+            session_container = tk.Frame(session_section, bg=self.colors['bg'])
+            session_container.pack(fill=tk.X)
+
+            for group_key, sessions in session_groups[:5]:
+                self._create_session_group(session_container, group_key, sessions)
 
         # 收藏夹
         if self.config.get("favorites"):
@@ -1025,7 +1474,7 @@ class ClaudeLauncher:
                 fav_item.pack(fill=tk.X, pady=(0, 2) if i < 4 else 0)
 
         # 初始化 last_mode 和 auto_close_var
-        self.last_mode = self.config.get("last_mode", "normal")
+        self.last_mode = self.config.get("last_mode", AGENT_CONFIGS[self.current_agent]["default_mode"])
         self.auto_close_var = tk.BooleanVar(value=self.config.get("auto_close", True))
 
         # 底部操作栏
@@ -1096,7 +1545,9 @@ class ClaudeLauncher:
 
     def update_current_directory_card(self):
         path = self.normalize_path(self.dir_var.get())
-        mode_text = "上次启动：跳过权限" if getattr(self, 'last_mode', 'normal') == "skip" else "上次启动：普通模式"
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        mode_cfg = agent_config["modes"].get(self.last_mode, {})
+        mode_text = f"上次启动：{mode_cfg.get('label', self.last_mode)}"
         self.current_mode_chip.config(text=mode_text)
 
         if not path:
@@ -1116,10 +1567,47 @@ class ClaudeLauncher:
             self.current_status_chip.config(text="目录无效", bg=self.colors['danger'], fg="#ffffff")
 
     def rebuild_ui(self):
+        if self.validation_job:
+            self.root.after_cancel(self.validation_job)
+            self.validation_job = None
         for child in self.root.winfo_children():
             child.destroy()
         self.setup_ui()
         self.update_current_directory_card()
+
+    def rebuild_launch_buttons(self):
+        for child in self.launch_buttons_frame.winfo_children():
+            child.destroy()
+
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        modes = agent_config["modes"]
+
+        for i, (mode_id, mode_cfg) in enumerate(modes.items()):
+            colors_list = [
+                (self.colors['accent'], self.colors['accent_hover']),
+                ('#9a3412', '#c2410c'),
+                ('#065f46', '#047857'),
+            ]
+            bg, hover = colors_list[i % len(colors_list)]
+            btn = ModernButton(
+                self.launch_buttons_frame,
+                mode_cfg["label"],
+                lambda m=mode_id: self.launch_agent(m),
+                bg, hover, '#ffffff',
+                width=220, height=40,
+                icon="▶" if i == 0 else "⚡"
+            )
+            btn.pack(side=tk.LEFT, padx=(0, 10) if i < len(modes) - 1 else (0, 0))
+
+    def switch_agent(self, agent_id):
+        if agent_id == self.current_agent:
+            return
+        self.current_agent = agent_id
+        self.config["agent"] = agent_id
+        self.last_mode = AGENT_CONFIGS[agent_id]["default_mode"]
+        self.config["last_mode"] = self.last_mode
+        self.save_config()
+        self.rebuild_ui()
 
     def on_path_change(self, *args):
         if self.validation_job:
@@ -1172,7 +1660,325 @@ class ClaudeLauncher:
 
     def launch_from_path(self, path):
         self.dir_var.set(self.normalize_path(path))
-        self.launch_claude(self.last_mode)
+        self.launch_agent(self.last_mode)
+
+    def _create_session_group(self, parent, group_key, sessions):
+        """创建可折叠的会话分组"""
+        # 外层容器
+        group_frame = tk.Frame(parent, bg=self.colors['bg'])
+        group_frame.pack(fill=tk.X, pady=(0, 4))
+
+        # 分组标题（可点击折叠）— 必须先 pack
+        group_header = tk.Frame(group_frame, bg=self.colors['card_bg'], height=36)
+        group_header.pack(fill=tk.X)
+        group_header.pack_propagate(False)
+
+        # 折叠箭头
+        arrow_var = tk.StringVar(value="▾")
+        arrow_label = tk.Label(group_header, textvariable=arrow_var,
+                              font=("Segoe UI", 9),
+                              bg=self.colors['card_bg'], fg=self.colors['text_secondary'],
+                              cursor="hand2", padx=4)
+        arrow_label.pack(side=tk.LEFT, padx=(8, 0))
+
+        # 项目名称
+        project_name = os.path.basename(group_key) or group_key
+        project_icon = tk.Label(group_header, text="📁",
+                               font=("Segoe UI", 11),
+                               bg=self.colors['card_bg'], fg=self.colors['accent'],
+                               cursor="hand2")
+        project_icon.pack(side=tk.LEFT, padx=(4, 6))
+
+        project_label = tk.Label(group_header, text=project_name,
+                                font=("Segoe UI", 9, "bold"),
+                                bg=self.colors['card_bg'], fg=self.colors['text'],
+                                cursor="hand2")
+        project_label.pack(side=tk.LEFT)
+
+        # 完整路径（截断）
+        max_path_len = 35
+        display_path = group_key if len(group_key) <= max_path_len else "..." + group_key[-(max_path_len-3):]
+        path_hint = tk.Label(group_header, text=display_path,
+                            font=("Segoe UI", 8),
+                            bg=self.colors['card_bg'], fg=self.colors['text_secondary'],
+                            cursor="hand2")
+        path_hint.pack(side=tk.LEFT, padx=(8, 0))
+
+        # 会话数量
+        count_label = tk.Label(group_header, text=f"{len(sessions)} 个会话",
+                              font=("Segoe UI", 8),
+                              bg=self.colors['card_bg'], fg=self.colors['text_secondary'])
+        count_label.pack(side=tk.RIGHT, padx=12)
+
+        # 打开目录按钮
+        open_dir_btn = tk.Label(group_header, text="📂",
+                               font=("Segoe UI", 10),
+                               bg=self.colors['card_bg'], fg=self.colors['text'],
+                               cursor="hand2", padx=6)
+        open_dir_btn.pack(side=tk.RIGHT, padx=(0, 4))
+        open_dir_btn.bind("<Enter>", lambda e: open_dir_btn.config(bg=self.colors['hover_bg']))
+        open_dir_btn.bind("<Leave>", lambda e: open_dir_btn.config(bg=self.colors['card_bg']))
+        open_dir_btn.bind("<Button-1>", lambda e, p=group_key: self.open_path_in_explorer(p))
+
+        # 子项容器（可折叠）— 在标题之后 pack
+        children_frame = tk.Frame(group_frame, bg=self.colors['bg'])
+        children_frame.pack(fill=tk.X)
+
+        # 折叠/展开状态
+        is_expanded = [True]
+
+        def toggle_expand(e=None):
+            if is_expanded[0]:
+                children_frame.pack_forget()
+                arrow_var.set("▸")
+            else:
+                children_frame.pack(fill=tk.X, after=group_header)
+                arrow_var.set("▾")
+            is_expanded[0] = not is_expanded[0]
+
+        def on_folder_double_click(e=None):
+            """双击文件夹：弹出模式选择对话框"""
+            self._on_folder_double_click(group_key)
+
+        # 绑定标题栏事件
+        for widget in [group_header, arrow_label, project_icon, project_label, path_hint, count_label]:
+            widget.bind("<Button-1>", toggle_expand)
+            widget.bind("<Double-Button-1>", on_folder_double_click)
+            widget.bind("<Enter>", lambda e: group_header.config(bg=self.colors['hover_bg']))
+            widget.bind("<Leave>", lambda e: group_header.config(bg=self.colors['card_bg']))
+
+        # 渲染会话子项
+        for i, session in enumerate(sessions[:3]):
+            session_item = tk.Frame(children_frame, bg=self.colors['bg'], height=40)
+            session_item.pack(fill=tk.X)
+            session_item.pack_propagate(False)
+
+            # 会话 ID
+            sid = session.get("id", "unknown")
+            sid_display = sid[:12] + "..." if len(sid) > 12 else sid
+            sid_label = tk.Label(session_item, text=sid_display,
+                                font=("Consolas", 8),
+                                bg=self.colors['bg'], fg=self.colors['text_secondary'],
+                                cursor="hand2")
+            sid_label.pack(side=tk.LEFT, padx=(28, 0), pady=8)
+
+            # 提示文本（第一个问题）
+            prompt = session.get("prompt", "")
+            if prompt:
+                prompt_display = prompt[:50] + "..." if len(prompt) > 50 else prompt
+                prompt_label = tk.Label(session_item, text=prompt_display,
+                                       font=("Segoe UI", 8),
+                                       bg=self.colors['bg'], fg=self.colors['text'],
+                                       anchor=tk.W, cursor="hand2")
+                prompt_label.pack(side=tk.LEFT, padx=(12, 0), fill=tk.X, expand=True, pady=8)
+
+            # 时间信息
+            if "mtime" in session:
+                from datetime import datetime
+                dt = datetime.fromtimestamp(session["mtime"])
+                time_str = dt.strftime("%m-%d %H:%M")
+            elif "date" in session:
+                time_str = session["date"]
+            elif "created" in session:
+                time_str = session["created"][:16]
+            else:
+                time_str = ""
+
+            if time_str:
+                time_label = tk.Label(session_item, text=time_str,
+                                    font=("Segoe UI", 8),
+                                    bg=self.colors['bg'], fg=self.colors['text_secondary'],
+                                    cursor="hand2")
+                time_label.pack(side=tk.RIGHT, padx=4, pady=8)
+
+            # 文件大小
+            if "size" in session:
+                size = session["size"]
+                if size > 1024 * 1024:
+                    size_str = f"{size / (1024*1024):.1f}MB"
+                elif size > 1024:
+                    size_str = f"{size / 1024:.0f}KB"
+                else:
+                    size_str = f"{size}B"
+                size_label = tk.Label(session_item, text=size_str,
+                                    font=("Segoe UI", 8),
+                                    bg=self.colors['bg'], fg=self.colors['text_secondary'],
+                                    cursor="hand2")
+                size_label.pack(side=tk.RIGHT, padx=(0, 4), pady=8)
+
+            # 删除按钮
+            delete_btn = tk.Label(session_item, text="✕",
+                                 font=("Segoe UI", 9),
+                                 bg=self.colors['bg'], fg=self.colors['text_secondary'],
+                                 cursor="hand2", padx=4)
+            delete_btn.pack(side=tk.RIGHT, padx=(0, 8), pady=8)
+            delete_btn.bind("<Enter>", lambda e, d=delete_btn: d.config(fg=self.colors['danger']))
+            delete_btn.bind("<Leave>", lambda e, d=delete_btn: d.config(fg=self.colors['text_secondary']))
+            delete_btn.bind("<Button-1>", lambda e, s=session, g=group_key: self._delete_session(s, g))
+
+            # 绑定双击事件 — 恢复会话
+            def on_session_double_click(e, s=session):
+                self._on_session_double_click(s)
+
+            session_item.bind("<Double-Button-1>", on_session_double_click)
+            for child in session_item.winfo_children():
+                if child != delete_btn:
+                    child.bind("<Double-Button-1>", on_session_double_click)
+
+            # 单击启动项目
+            session_item.bind("<Button-1>", lambda e, p=group_key: self._launch_session(p))
+            for child in session_item.winfo_children():
+                if child != delete_btn:
+                    child.bind("<Button-1>", lambda e, p=group_key: self._launch_session(p))
+                child.bind("<Enter>", lambda e, si=session_item: si.config(bg=self.colors['hover_bg']))
+                child.bind("<Leave>", lambda e, si=session_item: si.config(bg=self.colors['bg']))
+
+            session_item.bind("<Enter>", lambda e, si=session_item: si.config(bg=self.colors['hover_bg']))
+            session_item.bind("<Leave>", lambda e, si=session_item: si.config(bg=self.colors['bg']))
+
+    def _launch_session(self, project_path):
+        """点击会话项时，设置项目路径并启动"""
+        normalized = self.normalize_path(project_path)
+        if os.path.isdir(normalized):
+            self.dir_var.set(normalized)
+            self.launch_agent(self.last_mode)
+        else:
+            self.set_status(f"项目目录不存在: {normalized}", "warning")
+
+    def _on_folder_double_click(self, project_path):
+        """双击文件夹：弹出模式选择对话框，然后启动 agent"""
+        normalized = self.normalize_path(project_path)
+        if not os.path.isdir(normalized):
+            self.set_status(f"目录不存在: {normalized}", "warning")
+            return
+
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        modes = agent_config["modes"]
+
+        # 创建模式选择对话框
+        dialog = tk.Toplevel(self.root)
+        dialog.title("选择启动模式")
+        dialog.geometry("400x300")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # 居中显示
+        dialog.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 400) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 300) // 2
+        dialog.geometry(f"400x300+{x}+{y}")
+
+        colors = self.colors
+        dialog.configure(bg=colors['bg'])
+
+        # 标题
+        header = tk.Frame(dialog, bg=colors['card_bg'], height=60)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+
+        title_label = tk.Label(header, text=f"{agent_config['name']} - 选择模式",
+                              font=("Segoe UI", 12, "bold"),
+                              bg=colors['card_bg'], fg=colors['text'])
+        title_label.pack(pady=16)
+
+        # 项目路径
+        path_label = tk.Label(dialog, text=f"项目: {normalized}",
+                             font=("Segoe UI", 9),
+                             bg=colors['bg'], fg=colors['text_secondary'],
+                             wraplength=360)
+        path_label.pack(pady=(16, 8), padx=20)
+
+        # 模式按钮
+        selected_mode = [None]
+
+        def on_select(mode):
+            selected_mode[0] = mode
+            dialog.destroy()
+            # 启动 agent
+            self.dir_var.set(normalized)
+            self.launch_agent(mode)
+
+        modes_frame = tk.Frame(dialog, bg=colors['bg'])
+        modes_frame.pack(fill=tk.X, padx=20, pady=8)
+
+        for mode_id, mode_cfg in modes.items():
+            btn = tk.Button(modes_frame, text=f"{mode_cfg['label']}\n{mode_cfg['desc']}",
+                           font=("Segoe UI", 10),
+                           bg=colors['accent'], fg='#ffffff',
+                           activebackground=colors['accent_hover'],
+                           relief=tk.FLAT, padx=20, pady=10,
+                           command=lambda m=mode_id: on_select(m))
+            btn.pack(fill=tk.X, pady=4)
+            btn.bind("<Enter>", lambda e, b=btn: b.config(bg=colors['accent_hover']))
+            btn.bind("<Leave>", lambda e, b=btn: b.config(bg=colors['accent']))
+
+        # 取消按钮
+        cancel_btn = tk.Button(dialog, text="取消",
+                              font=("Segoe UI", 9),
+                              bg=colors['border'], fg=colors['text'],
+                              relief=tk.FLAT, padx=20, pady=6,
+                              command=dialog.destroy)
+        cancel_btn.pack(pady=8)
+
+    def _on_session_double_click(self, session):
+        """双击会话：恢复该会话"""
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        cwd = session.get("cwd", "")
+        session_id = session.get("id", "")
+
+        if not cwd or not os.path.isdir(cwd):
+            self.set_status(f"会话目录不存在: {cwd}", "warning")
+            return
+
+        # 构建恢复命令
+        cmd_path = self.resolve_agent_command()
+        if not cmd_path:
+            messagebox.showerror("错误", f"找不到 {agent_config['name']} 命令")
+            return
+
+        resume_args = agent_config.get("resume_args", [])
+        if cmd_path.lower().endswith((".cmd", ".bat")):
+            cmd = [os.environ.get("COMSPEC", "cmd.exe"), "/c", cmd_path]
+        else:
+            cmd = [cmd_path]
+
+        cmd.extend(resume_args)
+        if session_id:
+            cmd.append(session_id)
+
+        try:
+            subprocess.Popen(cmd, cwd=cwd, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            self.set_status(f"已恢复会话: {session_id[:12]}...", "success")
+        except Exception as e:
+            messagebox.showerror("错误", f"恢复会话失败: {str(e)}")
+
+    def _delete_session(self, session, group_key):
+        """删除指定会话"""
+        agent_config = AGENT_CONFIGS[self.current_agent]
+        session_id = session.get("id", "")
+        session_file = session.get("file", "")
+
+        # 确认删除
+        confirm = messagebox.askyesno("确认删除",
+                                     f"确定要删除这个会话吗？\n\n会话 ID: {session_id}\n项目: {group_key}\n\n此操作不可撤销。")
+        if not confirm:
+            return
+
+        # 删除文件
+        if session_file and os.path.isfile(session_file):
+            try:
+                os.remove(session_file)
+                self.set_status(f"已删除会话: {session_id[:12]}", "success")
+                self.rebuild_ui()
+            except Exception as e:
+                messagebox.showerror("错误", f"删除失败: {str(e)}")
+        else:
+            # 对于 MiMo 数据库中的会话，只提示不支持删除
+            if self.current_agent == "mimo":
+                messagebox.showinfo("提示", "MiMo Code 会话存储在数据库中，暂不支持单独删除。\n\n可以在 MiMo Code 中使用 /clear 清除会话。")
+            else:
+                self.set_status(f"会话文件不存在: {session_file}", "warning")
 
     def toggle_favorite(self, path):
         path = self.normalize_path(path)
@@ -1201,7 +2007,7 @@ class ClaudeLauncher:
 
     def select_favorite(self, path):
         self.dir_var.set(self.normalize_path(path))
-        self.launch_claude(self.last_mode)
+        self.launch_agent(self.last_mode)
 
     def add_to_favorites(self):
         path = self.normalize_path(self.dir_var.get())
@@ -1237,23 +2043,36 @@ class ClaudeLauncher:
             self.rebuild_ui()
             self.set_status("历史记录已清除", "info")
 
-    def launch_claude(self, mode=None):
+    def launch_agent(self, mode=None):
         work_dir = self.normalize_path(self.dir_var.get())
-        selected_mode = mode or self.last_mode
+        agent_config = AGENT_CONFIGS[self.current_agent]
 
         if not work_dir:
             messagebox.showerror("错误", "请选择或输入工作目录")
             return
 
         if not os.path.isdir(work_dir):
-            messagebox.showerror("错误", f"目录不存在或不是文件夹:\n{work_dir}\n\n请点击“浏览”选择这台电脑上的项目目录。")
+            messagebox.showerror("错误", f"目录不存在或不是文件夹:\n{work_dir}\n\n请点击 浏览 选择这台电脑上的项目目录。")
             self.set_status("目录无效，请选择本机存在的项目目录", "error")
             return
 
-        cmd = self.build_claude_command(selected_mode)
+        selected_mode = mode or self.last_mode
+        if selected_mode not in agent_config["modes"]:
+            selected_mode = agent_config["default_mode"]
+
+        env_key = agent_config.get("env_key")
+        if env_key and not os.environ.get(env_key):
+            messagebox.showerror("错误", f"未找到环境变量 {env_key}\n\n{agent_config['name']} 需要有效的 API Key 才能运行。\n\n请先设置 {env_key} 后重试。")
+            self.set_status(f"缺少环境变量 {env_key}", "error")
+            return
+
+        cmd = self.build_agent_command(selected_mode)
         if not cmd:
-            messagebox.showerror("错误", "找不到 claude 命令。\n\n请先安装 Claude Code，并确认在 PowerShell 中运行 claude --version 正常。")
-            self.set_status("未找到 claude 命令，请检查 Claude Code 安装和 PATH", "error")
+            env_hint = ""
+            if env_key:
+                env_hint = f"\n\n并确认 {env_key} 环境变量已设置"
+            messagebox.showerror("错误", f"找不到 {agent_config['name']} 命令。\n\n请先安装 {agent_config['name']}{env_hint}")
+            self.set_status(f"未找到 {agent_config['name']} 命令", "error")
             return
 
         if work_dir not in self.config["recent_dirs"]:
@@ -1275,8 +2094,8 @@ class ClaudeLauncher:
                 cwd=work_dir,
                 creationflags=subprocess.CREATE_NEW_CONSOLE
             )
-            mode_text = "跳过权限模式" if selected_mode == "skip" else "普通模式"
-            self.set_status(f"Claude Code 已以{mode_text}启动: {work_dir}", "success")
+            mode_label = agent_config["modes"][selected_mode]["label"]
+            self.set_status(f"{agent_config['name']} 已以{mode_label}启动: {work_dir}", "success")
 
             if self.auto_close_var.get():
                 self.root.destroy()
@@ -1284,7 +2103,7 @@ class ClaudeLauncher:
                 self.rebuild_ui()
         except Exception as e:
             messagebox.showerror("错误", f"启动失败: {str(e)}")
-            self.set_status("启动 Claude Code 失败", "error")
+            self.set_status(f"启动 {agent_config['name']} 失败", "error")
 
 def bring_to_front():
     """激活已运行的实例窗口"""

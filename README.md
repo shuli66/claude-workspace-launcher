@@ -1,6 +1,6 @@
-# Claude Workspace Launcher
+# AI Coding Launcher
 
-> 一个专为 Windows 用户设计的 Claude Code 启动器，让工作区切换和启动变得简单高效。
+> 一个专为 Windows 用户设计的多工具 AI 编程启动器，支持 Claude Code、Codex CLI 和 MiMo Code，让工作区切换和启动变得简单高效。
 
 [![Platform](https://img.shields.io/badge/平台-Windows-0078D4?style=flat-square)](#)
 [![Python](https://img.shields.io/badge/python-3.7%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#系统要求)
@@ -15,16 +15,17 @@
 
 ## 💡 为什么需要这个工具？
 
-Claude Code 在 Windows PowerShell 里很好用，但每次都要：
+AI 编程工具在 Windows PowerShell 里很好用，但每次都要：
 - 手动 `cd` 切换到项目目录
-- 输入 `claude` 或 `claude --dangerously-skip-permissions`
+- 输入 `claude` / `codex` / `mimo` 等命令
 - 记住不同项目的路径
 - 在多个项目间频繁切换
 
 这些重复操作会打断工作流，降低效率。
 
-**Claude Workspace Launcher 让这一切变得简单**：
+**AI Coding Launcher 让这一切变得简单**：
 - ✨ 一键启动，无需命令行
+- 🔀 支持多种 AI 编程工具（Claude Code / Codex CLI / MiMo Code）
 - 📁 可视化管理工作区
 - ⭐ 收藏常用项目
 - 🎨 现代化界面，符合 Windows 使用习惯
@@ -33,10 +34,17 @@ Claude Code 在 Windows PowerShell 里很好用，但每次都要：
 
 ## ✨ 核心功能
 
+### 🚀 多工具支持
+- **Claude Code**：普通模式 / 跳过权限模式
+- **Codex CLI**：沙箱模式 / YOLO 模式
+- **MiMo Code**：交互模式 / 单次执行模式
+- **一键切换**：在工具栏快速切换不同 AI 编程工具
+- **自动检测**：自动检测已安装的工具，未安装的显示为不可用
+
 ### 🚀 快速启动
-- **双模式启动**：普通模式 / 跳过权限模式
+- **多模式启动**：每个工具都有对应的启动模式
 - **一键切换**：在当前工作区卡片直接启动
-- **自动记忆**：记住上次使用的启动模式
+- **自动记忆**：记住上次使用的工具和启动模式
 
 ### 📁 工作区管理
 - **路径输入**：直接输入或粘贴目录路径
@@ -170,12 +178,15 @@ python claude_launcher.py
 
 ### EXE 版本
 - Windows 10 或 Windows 11
-- Claude Code 已安装并在 PATH 中可用
+- 至少安装以下一种 AI 编程工具：
+  - **Claude Code**：已安装并在 PATH 中可用
+  - **Codex CLI**：已安装并在 PATH 中可用（需要 OpenAI API Key）
+  - **MiMo Code**：已安装并在 PATH 中可用（需要 MiMo API Key）
 
 ### Python 版本（开发者）
 - Windows 10 或 Windows 11
 - Python 3.7 或更高版本
-- Claude Code 已安装并在 PATH 中可用
+- 至少安装以上一种 AI 编程工具
 
 **依赖库**（使用 pip 自动安装）：
 - `pystray` - 系统托盘支持
@@ -202,6 +213,7 @@ python claude_launcher.py
   "favorites": [
     "D:\\Projects\\my-app"
   ],
+  "agent": "claude",
   "last_mode": "normal",
   "auto_close": true,
   "theme": "auto"
@@ -211,7 +223,8 @@ python claude_launcher.py
 **配置项说明**：
 - `recent_dirs` - 最近使用的目录列表（最多 10 个）
 - `favorites` - 收藏夹列表（最多 10 个）
-- `last_mode` - 上次使用的启动模式（`normal` 或 `skip`）
+- `agent` - 当前选择的工具（`claude`、`codex` 或 `mimo`）
+- `last_mode` - 上次使用的启动模式（取决于所选工具）
 - `auto_close` - 启动后是否自动关闭启动器
 - `theme` - 主题设置（`auto`、`light` 或 `dark`）
 
@@ -236,7 +249,7 @@ python build.py
 ## 📂 项目结构
 
 ```
-claude-workspace-launcher/
+ai-coding-launcher/
 ├── claude_launcher.py      # 主程序
 ├── claude_icon.ico         # 应用图标
 ├── requirements.txt        # Python 依赖
@@ -260,11 +273,17 @@ claude-workspace-launcher/
 - 如果问题依然存在，删除旧的桌面快捷方式后重新创建
 - Windows 可能会缓存快捷方式图标，重新创建通常可以解决
 
-### 启动器窗口打开但 Claude 没有启动
-- 确保 `claude` 命令在 PATH 中可用
-- 在 PowerShell 中运行 `claude --version` 验证安装
+### 如何安装 AI 编程工具？
+- **Claude Code**：`npm install -g @anthropic-ai/claude-code`
+- **Codex CLI**：`npm install -g @openai/codex`（需要 OpenAI API Key）
+- **MiMo Code**：`npm install -g @mimo-ai/cli`（需要 MiMo API Key 或使用免费试用）
+
+### 启动器窗口打开但 AI 工具没有启动
+- 确保所选工具的命令在 PATH 中可用
+- 在 PowerShell 中运行 `claude --version` / `codex --version` / `mimo --version` 验证安装
 - 检查选择的工作目录是否有效
-- 如果提示找不到 `claude`，请重新安装 Claude Code，或重启电脑让 PATH 生效
+- 对于 Codex CLI，确保 `OPENAI_API_KEY` 环境变量已设置
+- 对于 MiMo Code，确保 `MIMO_API_KEY` 环境变量已设置（或使用 MiMo Auto 免费试用）
 
 ### 路径验证显示无效
 - 确认输入的是真实存在的目录
@@ -286,6 +305,8 @@ claude-workspace-launcher/
 
 ## 🗺️ 开发路线
 
+- [x] 支持多种 AI 编程工具（Claude Code / Codex CLI / MiMo Code）
+- [x] 工具选择器 UI
 - [ ] Git 分支/仓库状态显示
 - [ ] 可滚动的最近目录/收藏夹列表
 - [ ] 主题自定义

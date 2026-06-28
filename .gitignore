@@ -26,6 +26,10 @@ dist/
 *.jpeg
 *.webp
 
+# MiMo/MindFS local data
+.mimocode/
+.mindfs/
+
 # Keep distributed assets
 !claude_icon.ico
 !展示.png
