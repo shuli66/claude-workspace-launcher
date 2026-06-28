@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ====================================
-echo Claude Launcher - 安装快捷方式
+echo AI Coding Launcher - 安装快捷方式
 echo ====================================
 echo.
 
@@ -18,12 +18,12 @@ echo.
 
 REM 创建桌面快捷方式
 set DESKTOP=%USERPROFILE%\Desktop
-set SHORTCUT=%DESKTOP%\Claude Launcher.lnk
+set SHORTCUT=%DESKTOP%\AI Coding Launcher.lnk
 set EXE_PATH=%~dp0ClaudeLauncher.exe
 
 echo 正在创建桌面快捷方式...
 
-powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT%'); $Shortcut.TargetPath = '%EXE_PATH%'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.Description = 'Claude Code Launcher'; $Shortcut.Save()"
+powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT%'); $Shortcut.TargetPath = '%EXE_PATH%'; $Shortcut.WorkingDirectory = '%~dp0'; $Shortcut.Description = 'AI Coding Launcher'; $Shortcut.Save()"
 
 if %errorlevel% equ 0 (
     echo [OK] 桌面快捷方式创建成功
@@ -32,9 +32,9 @@ if %errorlevel% equ 0 (
     echo 安装完成！
     echo ====================================
     echo.
-    echo 快捷方式位置: %DESKTOP%\Claude Launcher.lnk
+    echo 快捷方式位置: %DESKTOP%\AI Coding Launcher.lnk
     echo.
-    echo 现在可以双击桌面上的 "Claude Launcher" 启动程序
+    echo 现在可以双击桌面上的 "AI Coding Launcher" 启动程序
     echo.
 ) else (
     echo [错误] 创建快捷方式失败
