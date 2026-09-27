@@ -986,6 +986,8 @@ git commit -m "feat: 会话扫描支持真实 cwd 分组与内存缓存"
 `tests/test_agent.py`:
 
 ```python
+import subprocess
+
 import pytest
 
 from claude_launcher import agent
@@ -1064,6 +1066,7 @@ def test_launch_spawns_in_new_console(tmp_path, monkeypatch):
     def fake_popen(cmd, cwd=None, creationflags=0):
         captured["cmd"] = cmd
         captured["cwd"] = cwd
+        captured["creationflags"] = creationflags
         return object()
 
     monkeypatch.setattr(agent.subprocess, "Popen", fake_popen)
@@ -1071,6 +1074,8 @@ def test_launch_spawns_in_new_console(tmp_path, monkeypatch):
 
     assert cmd == ["C:\\bin\\claude.exe"]
     assert captured["cwd"] == str(tmp_path)
+    # agent 必须在独立控制台里启动，否则用户看不到 Claude Code 的交互界面
+    assert captured["creationflags"] == subprocess.CREATE_NEW_CONSOLE
 
 
 def test_launch_falls_back_to_normal_for_unknown_mode(tmp_path, monkeypatch):
