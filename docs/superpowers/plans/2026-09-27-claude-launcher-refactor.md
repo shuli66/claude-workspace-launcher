@@ -260,6 +260,22 @@ def test_save_then_load_roundtrips(tmp_path):
     again.load()
     assert again.get("last_mode") == "skip"
     assert again.get("favorites") == ["D:\\proj"]
+
+
+def test_in_place_edit_does_not_leak_into_defaults(tmp_path):
+    """就地修改 get() 取出的列表，不得污染后续实例的默认值。
+
+    回归防护：若默认值用 dict(SCHEMA) 浅拷贝，所有实例会共享同一个
+    favorites 列表对象，一处 append 就会让「配置文件不存在」返回脏数据。
+    """
+    cfg = Config(tmp_path / "a.json")
+    cfg.load()
+    cfg.get("favorites").append("D:\\leaked")
+
+    fresh = Config(tmp_path / "not-there.json")
+    fresh.load()
+    assert fresh.get("favorites") == []
+    assert cfg.get("last_mode") == "normal"
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -293,6 +309,19 @@ SCHEMA: Dict[str, Any] = {
 }
 
 
+def _defaults() -> Dict[str, Any]:
+    """SCHEMA 的独立副本。
+
+    必须逐键复制可变值：dict(SCHEMA) 是浅拷贝，会让所有实例共享
+    SCHEMA["favorites"] 那同一个列表对象，调用方就地修改它就会污染
+    进程级默认值——此后「配置文件不存在」也返回被污染的数据。
+    """
+    return {
+        key: (list(value) if isinstance(value, list) else value)
+        for key, value in SCHEMA.items()
+    }
+
+
 def normalize_path(path: Any) -> str:
     """清理粘贴来的目录路径，兼容 Windows「复制为路径」的引号包裹。"""
     if not isinstance(path, str):
@@ -314,11 +343,11 @@ class Config:
 
     def __init__(self, path: Optional[Path] = None):
         self.path = Path(path) if path is not None else DEFAULT_PATH
-        self.data: Dict[str, Any] = dict(SCHEMA)
+        self.data: Dict[str, Any] = _defaults()
         self.warning: Optional[str] = None
 
     def load(self) -> None:
-        self.data = dict(SCHEMA)
+        self.data = _defaults()
         self.warning = None
 
         if not self.path.exists():
@@ -384,7 +413,7 @@ class Config:
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `TCL_LIBRARY= TK_LIBRARY= python -m pytest tests/test_config.py -v`
-Expected: 全部 PASS（13 个：10 个函数，其中 `test_legacy_last_mode_falls_back` 参数化展开为 4 个）
+Expected: 全部 PASS（14 个：11 个函数，其中 `test_legacy_last_mode_falls_back` 参数化展开为 4 个）
 
 - [ ] **Step 5: Commit**
 
