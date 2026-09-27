@@ -1,7 +1,6 @@
 """应用装配：单实例锁、托盘、顶层异常兜底。"""
 
 import socket
-import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
