@@ -1,366 +1,246 @@
-# AI Coding Launcher
+# Claude Launcher
 
-> 一个专为 Windows 用户设计的多工具 AI 编程启动器，支持 Claude Code、Codex CLI 和 MiMo Code，让工作区切换和启动变得简单高效。
+> 一个专为 Windows 设计的 Claude Code 启动器。可视化管理工作区、一键启动、浏览并恢复历史会话。
 
 [![Platform](https://img.shields.io/badge/平台-Windows-0078D4?style=flat-square)](#)
 [![Python](https://img.shields.io/badge/python-3.7%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#系统要求)
 [![License](https://img.shields.io/badge/许可证-MIT-green?style=flat-square)](./LICENSE)
-[![Release](https://img.shields.io/github/v/release/shuli66/claude-workspace-launcher?style=flat-square)](https://github.com/shuli66/claude-workspace-launcher/releases)
 
-## 📸 界面预览
+## 为什么需要这个工具
 
-![AI Coding Launcher 界面展示](./展示.png)
+Claude Code 在终端里很好用，但在 Windows 上每次都要：
 
----
+- 手动 `cd` 到项目目录
+- 输入 `claude` 命令
+- 记住各个项目的路径
+- 想恢复上次的会话时，还得翻找会话 ID
 
-## 💡 为什么需要这个工具？
+**Claude Launcher 把这四步变成一次点击。**
 
-AI 编程工具在 Windows PowerShell 里很好用，但每次都要：
-- 手动 `cd` 切换到项目目录
-- 输入 `claude` / `codex` / `mimo` 等命令
-- 记住不同项目的路径
-- 在多个项目间频繁切换
-
-这些重复操作会打断工作流，降低效率。
-
-**AI Coding Launcher 让这一切变得简单**：
-- ✨ 一键启动，无需命令行
-- 🔀 支持多种 AI 编程工具（Claude Code / Codex CLI / MiMo Code）
-- 📁 可视化管理工作区
-- ⭐ 收藏常用项目
-- 🎨 现代化界面，符合 Windows 使用习惯
+- 一键启动，无需命令行
+- 可视化管理工作区，收藏常用项目
+- 浏览历史会话并一键恢复
+- 界面配色取自 Claude 品牌
 
 ---
 
-## ✨ 核心功能
+## 界面预览
 
-### 🚀 多工具支持
-- **Claude Code**：普通模式 / 跳过权限模式
-- **Codex CLI**：沙箱模式 / YOLO 模式
-- **MiMo Code**：交互模式 / 单次执行模式
-- **一键切换**：在工具栏快速切换不同 AI 编程工具
-- **自动检测**：自动检测已安装的工具，未安装的显示为不可用
-
-### 🚀 快速启动
-- **多模式启动**：每个工具都有对应的启动模式
-- **一键切换**：在当前工作区卡片直接启动
-- **自动记忆**：记住上次使用的工具和启动模式
-
-### 📁 工作区管理
-- **路径输入**：直接输入或粘贴目录路径
-- **浏览选择**：通过文件浏览器选择目录
-- **实时验证**：输入时自动检查路径有效性
-- **资源管理器集成**：一键在资源管理器中打开目录
-
-### ⭐ 收藏夹系统
-- **快速收藏**：点击 ★ 图标添加到收藏夹
-- **即时访问**：收藏的项目显示在专属区域
-- **一键启动**：直接从收藏夹启动项目
-
-### 🕐 最近目录
-- **自动记录**：自动保存最近使用的 10 个目录
-- **快速回溯**：轻松返回之前的工作区
-- **可视化列表**：清晰展示项目名称和完整路径
-
-### 🎨 主题切换
-- **浅色模式**：适合白天使用
-- **深色模式**：适合夜间使用
-- **跟随系统**：自动跟随 Windows 系统主题
-
-### 🔧 桌面体验
-- **系统托盘**：最小化到托盘，不占用任务栏
-- **单实例运行**：重复启动自动激活已有窗口
-- **快捷键支持**：
-  - `Enter` - 普通启动
-  - `Ctrl+O` - 浏览目录
-  - `Esc` - 最小化到托盘
-- **设置面板**：独立的设置对话框，清晰管理选项
-
-### 🎯 界面设计
-- **现代化 UI**：参考 VS Code / JetBrains 设计风格
-- **卡片式布局**：信息层级清晰，一目了然
-- **流畅交互**：悬停效果、状态反馈
-- **可滚动内容**：支持大量收藏夹，鼠标滚轮滚动
+> 截图待更新为新版左右分栏界面。运行 `python main.py` 可查看当前界面。
 
 ---
 
-## 📦 下载安装
+## 功能
+
+### 启动
+- **两种启动模式**：普通启动 / 跳过权限
+- **自动记忆**：记住上次使用的模式
+- **快捷键**：`Enter` 启动、`Ctrl+O` 浏览目录、`Esc` 最小化到托盘
+
+### 工作区
+- **路径输入**：直接输入或粘贴目录路径（自动清理「复制为路径」带来的引号）
+- **实时校验**：输入时即显示「✓ 可用」或「✕ 无效」
+- **资源管理器集成**：一键在资源管理器中打开
+
+### 会话
+- **自动扫描**：读取 `~/.claude/projects` 下的历史会话
+- **按项目分组**：可折叠，显示每个会话的首个提问、时间与大小
+- **单击选中**：同步路径到输入框
+- **双击恢复**：以 `claude --resume <会话ID>` 直接恢复
+- **删除会话**：在列表内直接删除
+- **内存缓存**：切换主题、加删收藏不会重扫磁盘；点顶部刷新按钮可强制重扫
+
+### 收藏夹
+- **一键收藏**：点 ☆ 加入收藏夹
+- **直接启动**：从收藏夹启动项目或打开目录
+
+### 外观与体验
+- **主题**：浅色 / 深色 / 跟随系统（配色取自 Claude 品牌）
+- **系统托盘**：关闭窗口最小化到托盘，不占任务栏
+- **单实例**：重复启动会激活已有窗口
+- **异常兜底**：出错时弹窗提示，不会静默闪退
+
+---
+
+## 安装
 
 ### 方式一：下载 EXE（推荐）
 
-**✅ 无需安装 Python，开箱即用！**
+**无需安装 Python。**
 
-1. 前往 [Releases](https://github.com/shuli66/claude-workspace-launcher/releases/latest) 页面
-2. 下载最新版本的 `ClaudeLauncher.exe`（约 31MB）
-3. 下载 `install_exe.bat`（可选，用于创建桌面快捷方式）
-4. 将文件放到任意目录（推荐：`C:\Program Files\ClaudeLauncher\`）
-5. 双击 `install_exe.bat` 创建桌面快捷方式
-6. 双击桌面快捷方式启动
+1. 前往 [Releases](https://github.com/shuli66/claude-workspace-launcher/releases/latest) 下载 `ClaudeLauncher.exe`
+2. 同时下载 `install.bat`
+3. 将两个文件放在同一目录（推荐 `C:\Program Files\ClaudeLauncher\`）
+4. 双击 `install.bat` 创建桌面快捷方式
+5. 双击桌面上的 **Claude Launcher** 启动
 
-**优点**：
-- ✅ 无需 Python 环境
-- ✅ 无需安装依赖
-- ✅ 双击即用
-- ✅ 适合所有用户
+### 方式二：从源码运行
 
-### 方式二：从源码运行（开发者）
-
-**需要 Python 3.7+ 环境**
+需要 Python 3.7 或更高版本。
 
 ```bash
-# 克隆仓库
 git clone https://github.com/shuli66/claude-workspace-launcher.git
 cd claude-workspace-launcher
-
-# 安装依赖
 pip install -r requirements.txt
-
-# 运行
-python claude_launcher.py
+python main.py
 ```
 
-或使用安装脚本：
-- PowerShell：右键 `install.ps1` 选择"使用 PowerShell 运行"
-- 批处理：双击 `install.bat`
+或直接双击 `run.bat`。
 
 ---
 
-## 🎯 使用指南
+## 使用指南
 
-### 基本使用
+### 基本流程
 
-1. **启动程序**
-   - 双击桌面快捷方式或 exe 文件
+1. **选择工作目录** —— 在路径栏输入，或点「浏览」选择。路径会实时校验。
+2. **选择启动模式** —— 点「普通启动」或「跳过权限」。
+3. **开始工作** —— 启动后在 Claude Code 里正常操作。
 
-2. **选择 AI 工具**
-   - 在顶部工具栏点击切换 Claude Code / Codex / MiMo
-   - 已安装的工具显示为可用，未安装的显示为不可用
+### 会话列表（左侧栏）
 
-3. **选择工作目录**
-   - 在"工作目录"输入框中输入路径
-   - 或点击"浏览"按钮选择目录
-   - 路径会实时验证，显示 ✓ 可用 或 ✕ 无效
+- **单击**会话行：选中，并把该项目路径同步到右侧
+- **双击**会话行：以 `--resume` 恢复该会话
+- **单击**项目分组标题：折叠 / 展开
+- **双击**项目分组标题：弹出启动模式选择对话框
+- 点会话行右侧的 **✕**：删除该会话（不可撤销）
 
-4. **启动 AI 工具**
-   - 在"当前目录"卡片中选择启动模式
-   - 点击对应按钮即可启动
+### 设置（右上角 ⚙）
 
-### 会话管理
+- **外观主题**：浅色 / 深色 / 跟随系统（切换后界面立即重建）
+- **启动选项**：是否在启动 Claude Code 后自动关闭启动器
+- **退出程序**：完全退出（关窗口只是最小化到托盘）
 
-1. **查看会话**
-   - 程序会自动扫描当前工具的会话目录
-   - 按项目/日期分组显示，包含提问内容、时间、大小
+### 快捷键
 
-2. **恢复会话**
-   - 双击会话项，直接恢复该会话
-   - 或单击会话项设置路径后手动启动
-
-3. **删除会话**
-   - 点击会话项右侧的 ✕ 按钮删除
-
-4. **文件夹操作**
-   - 单击标题栏折叠/展开会话列表
-   - 双击标题栏弹出模式选择对话框
-   - 点击 📂 在资源管理器中打开目录
-
-### 高级功能
-
-#### 设置面板
-点击右上角 ⚙️ 图标打开设置：
-- **外观主题**：选择浅色/深色/跟随系统
-- **启动选项**：设置是否启动后自动关闭启动器
-- **退出程序**：点击红色"退出程序"按钮完全退出
-
-#### 系统托盘
-- 点击窗口关闭按钮或按 `Esc` 最小化到托盘
-- 右键托盘图标：
-  - 显示窗口
-  - 设置
-  - 退出程序
-
-#### 快捷键
-- `Enter` - 使用普通模式启动
-- `Ctrl+O` - 打开目录浏览器
-- `Esc` - 最小化到系统托盘
+| 按键 | 作用 |
+|---|---|
+| `Enter` | 以当前模式启动 |
+| `Ctrl+O` | 打开目录浏览器 |
+| `Esc` | 最小化到托盘 |
 
 ---
 
-## ⚙️ 系统要求
+## 系统要求
 
-### EXE 版本
 - Windows 10 或 Windows 11
-- 至少安装以下一种 AI 编程工具：
-  - **Claude Code**：已安装并在 PATH 中可用
-  - **Codex CLI**：已安装并在 PATH 中可用（需要 OpenAI API Key）
-  - **MiMo Code**：已安装并在 PATH 中可用（需要 MiMo API Key）
-
-### Python 版本（开发者）
-- Windows 10 或 Windows 11
-- Python 3.7 或更高版本
-- 至少安装以上一种 AI 编程工具
-
-**依赖库**（使用 pip 自动安装）：
-- `pystray` - 系统托盘支持
-- `Pillow` - 图标渲染
+- 已安装 Claude Code，且 `claude` 命令在 PATH 中
+  ```bash
+  npm install -g @anthropic-ai/claude-code
+  ```
+- 源码运行另需 Python 3.7+，依赖 `pystray` 与 `Pillow`
 
 ---
 
-## 🔧 配置文件
+## 配置文件
 
-启动器会在用户目录下创建配置文件：
+配置文件位于用户目录：
 
 ```
 %USERPROFILE%\.claude_launcher_config.json
 ```
 
-配置文件示例：
-
 ```json
 {
-  "recent_dirs": [
-    "D:\\Projects\\my-app",
-    "C:\\Work\\tooling"
-  ],
   "favorites": [
     "D:\\Projects\\my-app"
   ],
-  "agent": "claude",
   "last_mode": "normal",
   "auto_close": true,
   "theme": "auto"
 }
 ```
 
-**配置项说明**：
-- `recent_dirs` - 最近使用的目录列表（最多 10 个）
-- `favorites` - 收藏夹列表（最多 10 个）
-- `agent` - 当前选择的工具（`claude`、`codex` 或 `mimo`）
-- `last_mode` - 上次使用的启动模式（取决于所选工具）
-- `auto_close` - 启动后是否自动关闭启动器
-- `theme` - 主题设置（`auto`、`light` 或 `dark`）
+| 字段 | 说明 |
+|---|---|
+| `favorites` | 收藏的项目目录，最多 10 个 |
+| `last_mode` | 上次使用的启动模式：`normal` 或 `skip` |
+| `auto_close` | 启动 Claude Code 后是否自动关闭启动器 |
+| `theme` | 主题：`auto` / `light` / `dark` |
+
+配置会在启动时自动校验：无效的取值会回落到默认值，未知字段会被丢弃，文件随即被重写为干净版本。若文件损坏，程序会使用默认设置并在状态栏提示，不会崩溃。
 
 ---
 
-## 🛠️ 从源码打包
-
-如果你想自己打包 exe：
+## 从源码打包
 
 ```bash
-# 安装 PyInstaller
 pip install pyinstaller
-
-# 运行打包脚本
 python build.py
 ```
 
-打包后的 exe 文件位于 `dist/ClaudeLauncher.exe`
+产物为 `dist/ClaudeLauncher.exe`（约 27 MB）。分发时需同时提供 `assets/` 目录之外的 `install.bat` 用于创建快捷方式。
 
 ---
 
-## 📂 项目结构
+## 项目结构
 
 ```
-ai-coding-launcher/
-├── claude_launcher.py      # 主程序
-├── claude_icon.ico         # 应用图标
-├── requirements.txt        # Python 依赖
-├── build.py               # 打包脚本
-├── install.ps1            # PowerShell 安装脚本
-├── install.bat            # 批处理安装脚本
-├── install_exe.bat        # EXE 快捷方式安装脚本
-├── run.bat                # 运行脚本
-├── 展示.png               # 界面展示图
-├── README.md              # 项目说明
-├── LICENSE                # MIT 许可证
-└── .gitignore             # Git 忽略文件
+claude-launcher/
+├── main.py                     # 入口
+├── claude_launcher/
+│   ├── app.py                  # 应用装配、单实例锁、托盘、异常兜底
+│   ├── config.py               # 配置读写、校验与迁移
+│   ├── theme.py                # 配色 token（Claude 品牌）
+│   ├── sessions.py             # 会话扫描与内存缓存
+│   ├── agent.py                # Claude Code 命令构建与启动
+│   └── ui/
+│       ├── window.py           # 主窗口（左右分栏）
+│       ├── widgets.py          # 按钮、徽标、列表行等控件
+│       ├── dialogs.py          # 设置与启动模式对话框
+│       └── icons.py            # Canvas 手绘图标
+├── assets/
+│   ├── claude-mark.png         # Claude 标志（已去底）
+│   └── claude_icon.ico         # 窗口与任务栏图标
+├── tests/                      # 单元测试
+├── tools/                      # 冒烟脚本与资源生成脚本
+├── build.py                    # PyInstaller 打包脚本
+├── install.bat                 # 创建桌面快捷方式
+└── requirements.txt
 ```
 
 ---
 
-## ❓ 常见问题
+## 常见问题
 
-### 快捷方式图标显示异常
-- 重新运行 `install_exe.bat` 或 `install.ps1`
-- 如果问题依然存在，删除旧的桌面快捷方式后重新创建
-- Windows 可能会缓存快捷方式图标，重新创建通常可以解决
+**快捷方式图标显示异常**
+重新运行 `install.bat`。Windows 会缓存快捷方式图标，删除旧快捷方式后重建通常可解决。
 
-### 如何安装 AI 编程工具？
-- **Claude Code**：`npm install -g @anthropic-ai/claude-code`
-- **Codex CLI**：`npm install -g @openai/codex`（需要 OpenAI API Key）
-- **MiMo Code**：`npm install -g @mimo-ai/cli`（需要 MiMo API Key 或使用免费试用）
+**窗口打开了但 Claude Code 没启动**
+确认 `claude` 命令在 PATH 中：在 PowerShell 里运行 `claude --version`。也确认所选目录真实存在。
 
-### 启动器窗口打开但 AI 工具没有启动
-- 确保所选工具的命令在 PATH 中可用
-- 在 PowerShell 中运行 `claude --version` / `codex --version` / `mimo --version` 验证安装
-- 检查选择的工作目录是否有效
-- 对于 Codex CLI，确保 `OPENAI_API_KEY` 环境变量已设置
-- 对于 MiMo Code，确保 `MIMO_API_KEY` 环境变量已设置（或使用 MiMo Auto 免费试用）
+**路径校验显示无效**
+确认输入的是真实存在的目录。从资源管理器「复制为路径」带来的引号会被自动清理；若仍无效，用「浏览」按钮重新选择。
 
-### 路径验证显示无效
-- 确认输入的是真实存在的目录
-- 使用"浏览"按钮避免输入错误
-- 如果是从别人电脑复制的最近目录/收藏夹路径，需要改成自己电脑上真实存在的项目目录
-- 从资源管理器"复制为路径"得到的带引号路径会自动清理；如果仍无效，请点击"浏览"重新选择
+**想完全退出程序**
+关窗口只会最小化到托盘。右键托盘图标选「退出程序」，或在设置面板点「退出程序」。
 
-### 无法退出程序
-- 点击右上角 ⚙️ 图标打开设置
-- 点击红色"退出程序"按钮
-- 或右键系统托盘图标，选择"退出程序"
+**提示端口被其他程序占用**
+启动器用本地端口做单实例检测。若该端口被别的程序占用，会提示你并继续启动（旧版本此时会静默退出、双击无反应）。
 
-### 主题切换不生效
-- 打开设置面板（右上角 ⚙️）
-- 选择想要的主题
-- 主题会立即应用并重建界面
+**会话列表是空的**
+在任意目录用 Claude Code 工作过之后，会话才会出现。也可点顶部刷新按钮重扫。
 
 ---
 
-## 🗺️ 开发路线
+## 开发
 
-- [x] 支持多种 AI 编程工具（Claude Code / Codex CLI / MiMo Code）
-- [x] 工具选择器 UI
-- [x] 会话浏览和恢复
-- [x] 双击文件夹模式选择
-- [x] 可折叠会话分组
-- [ ] Git 分支/仓库状态显示
-- [ ] 主题自定义
-- [ ] 项目分组功能
-- [ ] 更好的打包方案（减小文件体积）
-- [ ] 多语言支持
+```bash
+# 运行测试（63 个）
+python -m pytest -q
 
----
+# 冒烟检查
+python tools/smoke_app.py
+python tools/smoke_window.py
+python tools/smoke_dialogs.py
+python tools/smoke_widgets.py
+python tools/smoke_icons.py
+```
 
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-如果你有改进 Windows 下 Claude Code 使用体验的想法，欢迎提出。
+> 注：若本机 `TCL_LIBRARY` / `TK_LIBRARY` 环境变量指向失效路径，tkinter 初始化会失败。冒烟脚本已在导入 tkinter 前自行置空这两个变量。
 
 ---
 
-## 📄 许可证
+## 许可证
 
-本项目采用 MIT 许可证 - 详见 [LICENSE](./LICENSE) 文件
-
----
-
-## ⭐ 支持项目
-
-如果这个启动器让你在 Windows 上使用 Claude Code 更顺手，欢迎给项目点个 Star ⭐
-
----
-
-## 📮 反馈与支持
-
-- 🐛 [报告 Bug](https://github.com/shuli66/claude-workspace-launcher/issues)
-- 💡 [功能建议](https://github.com/shuli66/claude-workspace-launcher/issues)
-- 📖 [查看文档](https://github.com/shuli66/claude-workspace-launcher)
-
----
-
-<div align="center">
-
-**让 AI 编程工具的启动变得简单高效** 🚀
-
-Made with ❤️ for Windows users
-
-</div>
+MIT License —— 详见 [LICENSE](./LICENSE)

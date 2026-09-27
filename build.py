@@ -1,35 +1,49 @@
-"""
-Claude Launcher - Build Script
-使用 PyInstaller 打包成单文件 exe
-"""
+"""Claude Launcher 打包脚本：使用 PyInstaller 生成单文件 exe。"""
 
-import PyInstaller.__main__
-import os
+import sys
 from pathlib import Path
 
-# 获取项目目录
-project_dir = Path(__file__).parent
+import PyInstaller.__main__
 
-# PyInstaller 参数
-PyInstaller.__main__.run([
-    str(project_dir / 'claude_launcher.py'),  # 主程序
-    '--name=ClaudeLauncher',                   # 输出文件名
-    '--onefile',                               # 打包成单文件
-    '--windowed',                              # 无控制台窗口
-    '--icon=' + str(project_dir / 'claude_icon.ico'),  # 图标
-    '--add-data=' + str(project_dir / 'claude_icon.ico') + ';.',  # 包含图标文件
-    '--clean',                                 # 清理临时文件
-    '--noconfirm',                            # 覆盖输出目录
-    '--distpath=' + str(project_dir / 'dist'),  # 输出目录
-    '--workpath=' + str(project_dir / 'build'),  # 临时目录
-    '--specpath=' + str(project_dir),          # spec 文件位置
-])
+PROJECT_DIR = Path(__file__).parent
+ASSETS = PROJECT_DIR / "assets"
+ENTRY = PROJECT_DIR / "main.py"
+ICON = ASSETS / "claude_icon.ico"
 
-print("\n" + "="*60)
-print("打包完成！")
-print("="*60)
-print(f"输出文件: {project_dir / 'dist' / 'ClaudeLauncher.exe'}")
-print("\n使用方法:")
-print("1. 将 ClaudeLauncher.exe 复制到任意目录")
-print("2. 双击运行即可")
-print("3. 可选：创建桌面快捷方式")
+
+def main():
+    if not ENTRY.exists():
+        print("找不到入口文件 %s" % ENTRY)
+        sys.exit(1)
+
+    if not ASSETS.exists():
+        print("找不到资源目录 %s" % ASSETS)
+        sys.exit(1)
+
+    arguments = [
+        str(ENTRY),
+        "--name=ClaudeLauncher",
+        "--onefile",
+        "--windowed",
+        "--clean",
+        "--noconfirm",
+        "--add-data=%s;assets" % ASSETS,
+        "--distpath=%s" % (PROJECT_DIR / "dist"),
+        "--workpath=%s" % (PROJECT_DIR / "build"),
+        "--specpath=%s" % PROJECT_DIR,
+    ]
+
+    if ICON.exists():
+        arguments.append("--icon=%s" % ICON)
+
+    PyInstaller.__main__.run(arguments)
+
+    print("\n" + "=" * 60)
+    print("打包完成")
+    print("=" * 60)
+    print("输出文件: %s" % (PROJECT_DIR / "dist" / "ClaudeLauncher.exe"))
+    print("同时需要分发 install.bat 以便创建桌面快捷方式")
+
+
+if __name__ == "__main__":
+    main()

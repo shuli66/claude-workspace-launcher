@@ -1,75 +1,43 @@
 @echo off
+chcp 65001 >nul
 echo ====================================
-echo Claude Code Launcher - Install
+echo Claude Launcher - 创建桌面快捷方式
 echo ====================================
 echo.
 
-REM Check Python
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [Error] Python not found. Please install Python 3.7+
-    echo Download: https://www.python.org/downloads/
+if not exist "%~dp0ClaudeLauncher.exe" (
+    echo [错误] 找不到 ClaudeLauncher.exe
+    echo 请将此脚本与 ClaudeLauncher.exe 放在同一目录
     pause
     exit /b 1
 )
 
-echo [OK] Python installed
+echo [OK] 找到 ClaudeLauncher.exe
 echo.
 
-REM Get script directory
-set SCRIPT_DIR=%~dp0
-set LAUNCHER_PATH=%SCRIPT_DIR%claude_launcher.py
-
-REM Check launcher file
-if not exist "%LAUNCHER_PATH%" (
-    echo [Error] claude_launcher.py not found
-    pause
-    exit /b 1
-)
-
-echo [OK] Launcher file found
-echo.
-
-REM Find pythonw.exe
-where pythonw.exe >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [Error] pythonw.exe not found in PATH
-    pause
-    exit /b 1
-)
-
-for /f "delims=" %%i in ('where pythonw.exe') do set PYTHONW_PATH=%%i
-
-REM Create desktop shortcut
-set DESKTOP=%USERPROFILE%\Desktop
-set SHORTCUT=%DESKTOP%\Claude Launcher.lnk
-
-echo Creating desktop shortcut...
-
-set ICON_PATH=%SCRIPT_DIR%claude_icon.ico
+set SHORTCUT=%USERPROFILE%\Desktop\Claude Launcher.lnk
+set EXE_PATH=%~dp0ClaudeLauncher.exe
+set ICON_PATH=%~dp0assets\claude_icon.ico
 
 if exist "%ICON_PATH%" (
-    powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT%'); $Shortcut.TargetPath = '%PYTHONW_PATH%'; $Shortcut.Arguments = '\"%LAUNCHER_PATH%\"'; $Shortcut.WorkingDirectory = '%SCRIPT_DIR%'; $Shortcut.IconLocation = '%ICON_PATH%,0'; $Shortcut.Description = 'Claude Code Launcher'; $Shortcut.Save()"
+    set ICON_ARG=-IconLocation '%ICON_PATH%,0'
 ) else (
-    powershell -Command "$WshShell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $Shortcut = $WshShell.CreateShortcut('%SHORTCUT%'); $Shortcut.TargetPath = '%PYTHONW_PATH%'; $Shortcut.Arguments = '\"%LAUNCHER_PATH%\"'; $Shortcut.WorkingDirectory = '%SCRIPT_DIR%'; $Shortcut.IconLocation = 'C:\Windows\System32\shell32.dll,13'; $Shortcut.Description = 'Claude Code Launcher'; $Shortcut.Save()"
+    set ICON_ARG=
 )
+
+echo 正在创建桌面快捷方式...
+
+powershell -Command "$shell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $s = $shell.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%EXE_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Claude Launcher'; if (Test-Path '%ICON_PATH%') { $s.IconLocation = '%ICON_PATH%,0' }; $s.Save()"
 
 if %errorlevel% equ 0 (
-    echo [OK] Desktop shortcut created
+    echo [OK] 桌面快捷方式创建成功
     echo.
-    echo ====================================
-    echo Installation Complete!
-    echo ====================================
-    echo.
-    echo Shortcut location: %DESKTOP%\Claude Launcher.lnk
-    echo.
-    echo You can now double-click "Claude Launcher" on desktop
-    echo.
+    echo 快捷方式位置: %SHORTCUT%
+    echo 现在可以双击桌面上的 "Claude Launcher" 启动程序
 ) else (
-    echo [Error] Failed to create shortcut
-    echo Please create manually with target:
-    echo "%PYTHONW_PATH%" "%LAUNCHER_PATH%"
-    echo.
+    echo [错误] 创建快捷方式失败
+    echo 请手动创建，目标文件: "%EXE_PATH%"
 )
 
+echo.
 pause

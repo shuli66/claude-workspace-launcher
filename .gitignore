@@ -26,13 +26,9 @@ dist/
 *.jpeg
 *.webp
 
-# MiMo/MindFS local data
-.mimocode/
-.mindfs/
-
 # Keep distributed assets
 !claude_icon.ico
-!展示.png
+!docs/legacy-ui-v2.0.0.png
 
 # Brainstorming companion artifacts
 .superpowers/

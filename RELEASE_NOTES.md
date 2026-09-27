@@ -1,101 +1,75 @@
-# AI Coding Launcher v2.0.0
+# Claude Launcher v2.1.0
 
-> 重大更新！从单一 Claude Code 启动器升级为多工具 AI 编程启动器，支持 Claude Code、Codex CLI 和 MiMo Code。
+> 重构版本。从「支持三个 AI 工具的单文件程序」回归为专注 Claude Code 的模块化应用。
 
-## 🆕 v2.0.0 新增功能
+## 为什么会有这次重构
 
-### 多工具支持
-- 🔀 **三工具切换**：支持 Claude Code、Codex CLI、MiMo Code
-- 🎯 **工具选择器**：顶部工具栏一键切换，自动检测可用状态
-- ⚙️ **独立配置**：每个工具独立的启动模式和环境变量检查
+v2.0.0 为支持 Claude Code / Codex CLI / MiMo Code 三个工具引入了大量分支。实际使用中只用到 Claude Code，另两个工具的判断逻辑、会话扫描器与配置项都成了纯粹的负担。
 
-### 会话管理
-- 📂 **会话浏览**：从实际会话目录读取，按项目/日期分组显示
-- 📝 **会话预览**：显示提问内容、时间、文件大小
-- 🔄 **会话恢复**：双击会话直接恢复对应 agent 的会话
-- 🗑️ **会话删除**：支持删除 Claude/Codex 的会话文件
+同时排查出 5 个影响使用的缺陷，一并在本次修复。
 
-### 智能交互
-- 🖱️ **双击文件夹**：弹出模式选择对话框，选择启动模式
-- 🖱️ **双击会话**：直接恢复该会话
-- ➕ **折叠/展开**：会话分组支持折叠展开
-- 🚫 **路径验证**：只显示目录确实存在的会话
+## 移除
 
-### 各工具启动模式
+- **Codex CLI 支持** —— 配置块、会话扫描器（rollout JSONL 解析）、YOLO 模式
+- **MiMo Code 支持** —— 配置块、SQLite 会话扫描、交互/单次执行模式
+- **工具选择器** —— 顶部整条工具栏，窗口高度因此减少 44px
+- **「最近目录」与「清除历史」** —— 该功能在界面上从未被渲染过，「清除历史」按钮点了没有任何反应
+- **两处死代码** —— `FavoriteItem` 与 `FolderGroup` 两个类从未被实例化
+- **三套并行的安装脚本与命名** —— 原先窗口标题叫「AI Coding Launcher」、类名与文件名是「ClaudeLauncher」、快捷方式又是「Claude Launcher」，现统一为 **Claude Launcher**
 
-| 工具 | 模式 | 说明 |
-|------|------|------|
-| Claude Code | 普通启动 | 标准权限确认流程 |
-| Claude Code | 跳过权限 | 快速启动，跳过权限提示 |
-| Codex CLI | 沙箱启动 | 标准沙箱模式（推荐） |
-| Codex CLI | YOLO 模式 | 跳过所有审批（仅限隔离环境） |
-| MiMo Code | 交互模式 | 启动 TUI 交互界面（推荐） |
-| MiMo Code | 单次执行 | 执行单个任务后退出 |
+## 修复的缺陷
 
-## 📦 下载安装
+| 缺陷 | 原因 | 现状 |
+|---|---|---|
+| 设置里「自动关闭」开关无效 | 设置写入 config，但启动时读的是另一个不同步的变量，还用旧值把设置覆盖回去 | 统一走 config |
+| 切换主题时对话框重复销毁 | 父窗口重建会销毁全部子控件（含设置对话框），之后再销毁一次会抛 `TclError` | 改为先关闭对话框再切换 |
+| 「清除历史」按钮点了没反应 | 界面从不渲染最近目录列表 | 功能与按钮一并移除 |
+| 端口被占用时双击图标毫无反应 | 单实例检测失败后直接静默退出，无任何提示 | 弹窗说明并继续启动 |
+| 单击会话项会直接启动 agent | 会话行的单击事件绑定了启动 | 改为单击选中、双击恢复 |
 
-### EXE 版本（推荐）
+## 界面重做
 
-**无需安装 Python，开箱即用！**
+- **左右分栏布局**：会话列表常驻左侧，右侧为当前项目的路径、状态与启动操作。窗口 900×620，内容不再溢出高度
+- **配色取自 Claude 品牌**：奶油米底 `#efede4`、珊瑚橙 `#d97757`（该色值由 `claude_icon.ico` 中心像素采样确认）、暖炭灰深色底 `#262624`。全部灰阶偏暖，不使用中性灰
+- **图标改为 Canvas 手绘**：原先用 emoji（⚡🤖🧠📂★🕘），在不同 Windows 版本渲染不一致且无法跟随主题换色
+- **布局状态保留**：折叠状态在列表刷新后不再丢失
 
-1. 下载 `ClaudeLauncher.exe`
-2. 下载 `install_exe.bat`
-3. 将两个文件放在同一目录
-4. 双击 `install_exe.bat` 创建桌面快捷方式
+## 性能
 
-### 从源码运行
+原先每次界面重建都会重扫磁盘 —— 切换主题、加删收藏、删除会话、以及关闭自动关闭时每次启动，都会对 `~/.claude/projects` 下每个项目读取前 5 个会话文件两遍。50 个项目约 250 次文件读取。
 
-需要 Python 3.7+ 环境：
+现在扫描结果缓存在内存中，只有启动时、点刷新按钮、以及删除会话时才会触碰磁盘。界面骨架只构建一次，会话列表与收藏夹各自独立更新。
 
-```bash
-git clone https://github.com/shuli66/claude-workspace-launcher.git
-cd claude-workspace-launcher
-pip install -r requirements.txt
-python claude_launcher.py
+## 架构
+
+从单文件 2184 行拆分为按职责分层的包：
+
+```
+main.py              入口
+claude_launcher/
+  app.py             装配、单实例锁、托盘、异常兜底
+  config.py          配置读写与校验
+  theme.py           配色 token
+  sessions.py        会话扫描与缓存
+  agent.py           命令构建与启动
+  ui/                界面层
 ```
 
-## ⚙️ 系统要求
+`config` / `theme` / `sessions` / `agent` 四个模块不依赖 tkinter，可脱离界面单独测试。测试从 0 增加到 63 个。
 
-- Windows 10/11
-- 至少安装以下一种 AI 编程工具：
-  - Claude Code（`npm install -g @anthropic-ai/claude-code`）
-  - Codex CLI（`npm install -g @openai/codex`，需要 OpenAI API Key）
-  - MiMo Code（`npm install -g @mimo-ai/cli`，需要 MiMo API Key）
+## 升级须知
 
-## 📝 更新日志
+配置文件会**自动迁移**，无需手动处理：
 
-### v2.0.0 (2026-06-29)
+- `agent` 字段被丢弃（只剩 Claude 一个工具）
+- `last_mode` 若为旧值（`yolo` / `interactive` / `run`）会回落到 `normal`
+- `recent_dirs` 字段被丢弃
 
-**重大更新 - 多工具支持**
-- ✅ 支持 Claude Code、Codex CLI、MiMo Code 三种工具
-- ✅ 工具选择器 UI
-- ✅ 从实际会话目录读取会话信息
-- ✅ 双击文件夹弹出模式选择
-- ✅ 双击会话恢复功能
-- ✅ 会话删除功能
-- ✅ 可折叠的会话分组
-- ✅ 路径验证和存在性检查
-- ✅ 环境变量预检查（防止闪退）
-- ✅ 模式验证和回退机制
+## 系统要求
 
-### v1.0.0 (2026-05-08)
+- Windows 10 / 11
+- Claude Code 已安装且在 PATH 中：`npm install -g @anthropic-ai/claude-code`
 
-**首次发布**
-- ✅ Claude Code 快速启动
-- ✅ 工作区管理
-- ✅ 收藏夹系统
-- ✅ 主题切换
-- ✅ 系统托盘
-- ✅ 设置对话框
+## 许可证
 
-## 🙏 致谢
-
-感谢所有测试和反馈的用户！
-
-## 📄 许可证
-
-MIT License - 详见 [LICENSE](./LICENSE)
-
----
-
-**如有问题或建议，欢迎提 [Issue](https://github.com/shuli66/claude-workspace-launcher/issues)！**
+MIT License —— 详见 [LICENSE](./LICENSE)
