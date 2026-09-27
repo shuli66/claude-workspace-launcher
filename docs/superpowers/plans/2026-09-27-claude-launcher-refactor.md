@@ -1616,16 +1616,25 @@ _PAINTERS = {
 
 
 def draw(canvas, name, color, size, x=0, y=0):
-    """在 canvas 的 (x, y) 处绘制边长为 size 的图标。未知名字静默忽略。"""
+    """在 canvas 的 (x, y) 处绘制边长为 size 的图标。未知名字静默忽略。
+
+    所有新建图元都打上 "icon" 标签，调用方据此用 canvas.delete("icon")
+    清除上一个图标再重绘 —— 悬停换色与 star/star_filled 切换都依赖这一点。
+    缺了打标签，delete("icon") 删不掉任何东西，图元会在画布上不断累积。
+    """
     width = max(1, round(size / 8))
+    existing = set(canvas.find_all())
 
     if name in ("star", "star_filled"):
         _draw_star(canvas, x, y, size, color, width, name == "star_filled")
-        return
+    else:
+        painter = _PAINTERS.get(name)
+        if painter:
+            painter(canvas, x, y, size, color, width)
 
-    painter = _PAINTERS.get(name)
-    if painter:
-        painter(canvas, x, y, size, color, width)
+    created = [item for item in canvas.find_all() if item not in existing]
+    if created:
+        canvas.addtag_withtag("icon", *created)
 ```
 
 - [ ] **Step 5: 冒烟测试图标绘制**
@@ -1662,9 +1671,21 @@ def main():
     for index, name in enumerate(NAMES):
         icons.draw(canvas, name, "#d97757", 24, x=10 + (index % 7) * 32, y=10 + (index // 7) * 40)
 
+    # 回归保护：draw() 必须给图元打 "icon" 标签，否则 delete("icon") 无效，
+    # IconButton 悬停换色与 star/star_filled 切换都会在画布上累积图元。
+    canvas.delete("all")
+    icons.draw(canvas, "star", "#d97757", 24, x=4, y=4)
+    first = len(canvas.find_all())
+    canvas.delete("icon")
+    after_delete = len(canvas.find_all())
+    assert first > 0, "draw() 未在画布上创建任何图元"
+    assert after_delete == 0, (
+        "delete('icon') 未清除图元：draw() 未打 icon 标签（%d → %d）" % (first, after_delete)
+    )
+
     print("claude_mark:", icons.claude_mark() is not None)
     print("assets_dir:", icons.assets_dir())
-    print("已绘制 %d 个图标，无异常" % len(NAMES))
+    print("已绘制 %d 个图标，无异常；icon 标签回归检查通过" % len(NAMES))
     root.destroy()
 
 
@@ -2049,6 +2070,8 @@ git commit -m "feat: 添加基础控件（直角按钮、图标按钮、状态�
     - 方法 `set_child_selection(session_id)`
   - `FavoriteRow(parent, path, colors, on_open, on_launch, on_remove)`
   - 工具函数 `format_size(bytes) -> str`、`format_time(mtime) -> str`、`elide_path(path, limit) -> str`
+- `IconButton` 的清除语义依赖 `icons.draw()` 给图元打 `"icon"` 标签（见 Task 6）——
+  若该标签缺失，`set_icon()` 会在画布上叠加新旧两个图标而非替换
 
 - [ ] **Step 1: 写失败的测试（纯函数部分）**
 
