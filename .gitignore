@@ -39,3 +39,6 @@ dist/
 
 # Playwright MCP scratch output
 .playwright-mcp/
+
+# Test cache
+.pytest_cache/
