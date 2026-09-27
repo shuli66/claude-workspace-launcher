@@ -40,6 +40,20 @@ def main():
     tk.Label(area.content, text="内容", bg=colors["bg"]).pack()
     area.refresh_scrollregion()
 
+    sessions = [
+        {"id": "a1b2c3d4", "file": "x", "mtime": 1700000000.0, "size": 4096,
+         "prompt": "重构登录模块", "cwd": "D:\\proj"},
+    ]
+    widgets.SessionRow(frame, sessions[0], colors, lambda s: None, lambda s: None,
+                       lambda s: None).pack()
+    group = widgets.FolderGroupRow(frame, "D:\\proj", sessions, colors,
+                                   lambda s: None, lambda s: None, lambda s: None,
+                                   lambda p: None, lambda p: None, lambda p, e: None)
+    group.pack()
+    group.set_child_selection("a1b2c3d4")
+    widgets.FavoriteRow(frame, "D:\\proj", colors, lambda p: None, lambda p: None,
+                        lambda p: None).pack()
+
     print("控件构造全部通过")
     root.destroy()
 

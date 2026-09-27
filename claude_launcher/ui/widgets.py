@@ -1,6 +1,8 @@
 """无业务逻辑的展示控件。所有颜色经 colors 字典注入，不自行决定配色。"""
 
+import os
 import tkinter as tk
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import icons
 
@@ -251,3 +253,238 @@ class ScrollArea(tk.Frame):
 
     def scroll_to_top(self):
         self.canvas.yview_moveto(0.0)
+
+
+def format_size(size):
+    if size >= 1024 * 1024:
+        return "%.1fMB" % (size / (1024 * 1024))
+    if size >= 1024:
+        return "%dKB" % (size / 1024)
+    return "%dB" % size
+
+
+def format_time(mtime):
+    from datetime import datetime
+
+    try:
+        return datetime.fromtimestamp(mtime).strftime("%m-%d %H:%M")
+    except (ValueError, OSError, OverflowError):
+        return ""
+
+
+def elide_path(path, limit=35):
+    if len(path) <= limit:
+        return path
+    return "..." + path[-(limit - 3):]
+
+
+class SessionRow(tk.Frame):
+    """会话列表的一行。单击选中，双击恢复。"""
+
+    def __init__(self, parent, session, colors, on_select, on_resume, on_delete):
+        super().__init__(parent, bg=colors["bg"], height=26)
+        self.pack_propagate(False)
+
+        self.session = session
+        self.colors = colors
+        self.on_select = on_select
+        self.on_resume = on_resume
+        self.on_delete = on_delete
+        self._selected = False
+
+        self.accent_bar = tk.Frame(self, bg=colors["bg"], width=2)
+        self.accent_bar.pack(side=tk.LEFT, fill=tk.Y)
+
+        self.title = tk.Label(
+            self,
+            text=session.get("prompt") or session.get("id", ""),
+            font=("Segoe UI", 9),
+            bg=colors["bg"], fg=colors["ink_2"],
+            anchor=tk.W, padx=12,
+        )
+        self.title.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.time_label = tk.Label(
+            self, text=format_time(session.get("mtime", 0)),
+            font=("Segoe UI", 8), bg=colors["bg"], fg=colors["ink_3"], padx=5,
+        )
+        self.time_label.pack(side=tk.RIGHT)
+
+        self.delete_btn = tk.Label(
+            self, text="✕", font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["bg"], padx=4, cursor="hand2",
+        )
+        self.delete_btn.pack(side=tk.RIGHT)
+
+        for widget in (self, self.title, self.time_label):
+            widget.bind("<Button-1>", self._click)
+            widget.bind("<Double-Button-1>", self._double_click)
+            widget.bind("<Enter>", self._hover_in)
+            widget.bind("<Leave>", self._hover_out)
+
+        self.delete_btn.bind("<Button-1>", lambda _event: self.on_delete(self.session))
+        self.delete_btn.bind("<Enter>", lambda _event: self.delete_btn.config(fg=colors["danger"]))
+        self.delete_btn.bind("<Leave>", lambda _event: self.delete_btn.config(
+            fg=colors["danger"] if self._selected else colors["bg"]))
+
+    def _background(self):
+        return self.colors["accent_soft"] if self._selected else self.colors["bg"]
+
+    def _paint(self, background):
+        for widget in (self, self.title, self.time_label, self.delete_btn):
+            widget.config(bg=background)
+        self.accent_bar.config(bg=self.colors["accent"] if self._selected else background)
+        self.delete_btn.config(
+            fg=self.colors["danger"] if self._selected else background)
+
+    def _click(self, _event):
+        self.on_select(self.session)
+
+    def _double_click(self, _event):
+        self.on_resume(self.session)
+
+    def _hover_in(self, _event):
+        if not self._selected:
+            self._paint(self.colors["hover"])
+            self.delete_btn.config(fg=self.colors["ink_3"])
+
+    def _hover_out(self, _event):
+        if not self._selected:
+            self._paint(self.colors["bg"])
+
+    def set_selected(self, selected):
+        self._selected = selected
+        self._paint(self._background())
+        self.title.config(fg=self.colors["ink"] if selected else self.colors["ink_2"])
+
+
+class FolderGroupRow(tk.Frame):
+    """可折叠的项目分组。标题行 + 子会话行容器。"""
+
+    def __init__(self, parent, project_path, sessions, colors, on_select,
+                 on_resume, on_delete, on_open, on_double_click, on_toggle,
+                 expanded=True):
+        super().__init__(parent, bg=colors["bg"])
+
+        self.project_path = project_path
+        self.sessions = sessions
+        self.colors = colors
+        self.expanded = expanded
+        self.on_open = on_open
+        self.on_toggle = on_toggle
+
+        header = tk.Frame(self, bg=colors["bg"], height=28)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        self.header = header
+
+        self.chevron = tk.Canvas(
+            header, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+        )
+        self.chevron.pack(side=tk.LEFT, padx=(4, 2))
+        self._draw_chevron()
+
+        self.name_label = tk.Label(
+            header, text=os.path.basename(project_path) or project_path,
+            font=("Segoe UI", 9, "bold"), bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
+        )
+        self.name_label.pack(side=tk.LEFT)
+
+        self.count_label = tk.Label(
+            header, text=str(len(sessions)), font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["ink_3"], padx=6,
+        )
+        self.count_label.pack(side=tk.RIGHT)
+
+        self.rows = []
+        self.children_frame = tk.Frame(self, bg=colors["bg"])
+
+        for session in sessions:
+            row = SessionRow(
+                self.children_frame, session, colors, on_select, on_resume, on_delete,
+            )
+            row.pack(fill=tk.X)
+            self.rows.append(row)
+
+        if self.expanded:
+            self.children_frame.pack(fill=tk.X)
+
+        for widget in (header, self.name_label, self.count_label, self.chevron):
+            widget.bind("<Button-1>", self._toggle)
+            widget.bind("<Double-Button-1>", lambda _event: on_double_click(project_path))
+            widget.bind("<Enter>", self._hover_in)
+            widget.bind("<Leave>", self._hover_out)
+
+    def _draw_chevron(self):
+        self.chevron.delete("icon")
+        icons.draw(
+            self.chevron,
+            "chevron_down" if self.expanded else "chevron_right",
+            self.colors["ink_3"], 12, x=1, y=1,
+        )
+
+    def _hover_in(self, _event):
+        self.header.config(bg=self.colors["hover"])
+        self.name_label.config(bg=self.colors["hover"])
+        self.count_label.config(bg=self.colors["hover"])
+
+    def _hover_out(self, _event):
+        self.header.config(bg=self.colors["bg"])
+        self.name_label.config(bg=self.colors["bg"])
+        self.count_label.config(bg=self.colors["bg"])
+
+    def _toggle(self, _event):
+        self.expanded = not self.expanded
+        if self.expanded:
+            self.children_frame.pack(fill=tk.X)
+        else:
+            self.children_frame.pack_forget()
+        self._draw_chevron()
+        self.on_toggle(self.project_path, self.expanded)
+
+    def set_child_selection(self, session_id):
+        for row in self.rows:
+            row.set_selected(row.session.get("id") == session_id)
+
+
+class FavoriteRow(tk.Frame):
+    """收藏夹的一行：名称 + 路径 + 打开 + 启动 + 移除。"""
+
+    def __init__(self, parent, path, colors, on_open, on_launch, on_remove):
+        super().__init__(parent, bg=colors["line"], padx=1, pady=1)
+
+        body = tk.Frame(self, bg=colors["bg"], height=40)
+        body.pack(fill=tk.BOTH, expand=True)
+        body.pack_propagate(False)
+
+        icon = tk.Canvas(body, width=20, height=20, bg=colors["bg"], highlightthickness=0)
+        icon.pack(side=tk.LEFT, padx=(10, 6))
+        icons.draw(icon, "star_filled", colors["accent"], 14, x=3, y=3)
+
+        text = tk.Frame(body, bg=colors["bg"])
+        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        tk.Label(
+            text, text=os.path.basename(path) or path, font=("Segoe UI", 9, "bold"),
+            bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
+        ).pack(fill=tk.X, pady=(5, 0))
+        tk.Label(
+            text, text=elide_path(path, 42), font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
+        ).pack(fill=tk.X)
+
+        actions = tk.Frame(body, bg=colors["bg"])
+        actions.pack(side=tk.RIGHT, padx=(4, 8))
+
+        FlatButton(actions, "启动", lambda: on_launch(path), colors).pack(side=tk.RIGHT)
+        FlatButton(actions, "打开", lambda: on_open(path), colors, variant="ghost").pack(
+            side=tk.RIGHT, padx=(0, 5))
+
+        remove = tk.Label(
+            actions, text="✕", font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["ink_3"], padx=6, cursor="hand2",
+        )
+        remove.pack(side=tk.RIGHT)
+        remove.bind("<Button-1>", lambda _event: on_remove(path))
+        remove.bind("<Enter>", lambda _event: remove.config(fg=colors["danger"]))
+        remove.bind("<Leave>", lambda _event: remove.config(fg=colors["ink_3"]))
