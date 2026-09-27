@@ -33,3 +33,9 @@ dist/
 # Keep distributed assets
 !claude_icon.ico
 !展示.png
+
+# Brainstorming companion artifacts
+.superpowers/
+
+# Playwright MCP scratch output
+.playwright-mcp/
