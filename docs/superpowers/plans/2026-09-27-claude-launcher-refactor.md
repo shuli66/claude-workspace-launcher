@@ -1633,9 +1633,13 @@ def draw(canvas, name, color, size, x=0, y=0):
             painter(canvas, x, y, size, color, width)
 
     created = [item for item in canvas.find_all() if item not in existing]
-    if created:
-        canvas.addtag_withtag("icon", *created)
+    for item in created:
+        canvas.addtag_withtag("icon", item)
 ```
+
+注意必须**逐个**传入 `addtag_withtag`：其签名是 `(self, newtag, tagOrId)`，
+只接受一个 tagOrId。传元组会静默地一个都打不上；用 `*created` 展开会
+`TypeError`。逐个循环是唯一正确形式。
 
 - [ ] **Step 5: 冒烟测试图标绘制**
 
