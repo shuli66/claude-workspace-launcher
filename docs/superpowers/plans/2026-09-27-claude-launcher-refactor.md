@@ -2067,7 +2067,11 @@ git commit -m "feat: 添加基础控件（直角按钮、图标按钮、状态�
   - `SessionRow(parent, session, colors, on_select, on_resume, on_delete)`
     - 方法 `set_selected(bool)`
     - 单击 → `on_select(session)`；双击 → `on_resume(session)`；点 ✕ → `on_delete(session)`
-  - `FolderGroupRow(parent, project_path, sessions, colors, on_select, on_resume, on_delete, on_open, on_double_click, on_toggle, expanded=True)`
+  - `FolderGroupRow(parent, project_path, sessions, colors, on_select, on_resume, on_delete, on_double_click, on_toggle, expanded=True)`
+    —— 注意此构造器**不含 `on_open`**。计划早期版本收了这个参数却从未接控件，
+    是死参数；且 spec 第 6 节的交互表未给分组标题规定「打开目录」，
+    5.1 布局图中分组行只有折叠箭头、名称与计数。「打开目录」在 spec 中
+    属于当前项目卡片、路径栏与收藏行，不在此处。
     - 属性 `expanded`、`project_path`、`sessions`
     - 单击标题切换 `expanded` 并显隐子行，随后调用 `on_toggle(project_path, expanded)` 让调用方持久化展开状态
     - 双击标题 → `on_double_click(project_path)`
@@ -2235,7 +2239,7 @@ class FolderGroupRow(tk.Frame):
     """可折叠的项目分组。标题行 + 子会话行容器。"""
 
     def __init__(self, parent, project_path, sessions, colors, on_select,
-                 on_resume, on_delete, on_open, on_double_click, on_toggle,
+                 on_resume, on_delete, on_double_click, on_toggle,
                  expanded=True):
         super().__init__(parent, bg=colors["bg"])
 
@@ -2243,7 +2247,6 @@ class FolderGroupRow(tk.Frame):
         self.sessions = sessions
         self.colors = colors
         self.expanded = expanded
-        self.on_open = on_open
         self.on_toggle = on_toggle
 
         header = tk.Frame(self, bg=colors["bg"], height=28)
@@ -3014,7 +3017,6 @@ class MainWindow:
                 on_select=self.select_session,
                 on_resume=self.resume_session,
                 on_delete=self.delete_session,
-                on_open=self.open_path_in_explorer,
                 on_double_click=self.open_mode_dialog,
                 on_toggle=self._on_group_toggle,
                 expanded=project_path not in self.collapsed_projects,
