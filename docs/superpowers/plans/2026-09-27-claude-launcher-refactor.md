@@ -2396,7 +2396,7 @@ Expected: 全部 PASS（7 个测试）
                        lambda s: None).pack()
     group = widgets.FolderGroupRow(frame, "D:\\proj", sessions, colors,
                                    lambda s: None, lambda s: None, lambda s: None,
-                                   lambda p: None, lambda p: None, lambda p, e: None)
+                                   lambda p: None, lambda p, e: None)
     group.pack()
     group.set_child_selection("a1b2c3d4")
     widgets.FavoriteRow(frame, "D:\\proj", colors, lambda p: None, lambda p: None,
