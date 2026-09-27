@@ -3698,7 +3698,7 @@ if not exist "%~dp0ClaudeLauncher.exe" (
 echo [OK] 找到 ClaudeLauncher.exe
 echo.
 
-set SHORTCUT=%USERPROFILE%\Desktop\Claude Launcher.lnk
+set SHORTCUT=%USERPROFILE%\Desktop\ClaudeLauncher.exe.lnk
 set EXE_PATH=%~dp0ClaudeLauncher.exe
 set ICON_PATH=%~dp0assets\claude_icon.ico
 

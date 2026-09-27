@@ -15,15 +15,9 @@ if not exist "%~dp0ClaudeLauncher.exe" (
 echo [OK] 找到 ClaudeLauncher.exe
 echo.
 
-set SHORTCUT=%USERPROFILE%\Desktop\Claude Launcher.lnk
+set SHORTCUT=%USERPROFILE%\Desktop\ClaudeLauncher.exe.lnk
 set EXE_PATH=%~dp0ClaudeLauncher.exe
 set ICON_PATH=%~dp0assets\claude_icon.ico
-
-if exist "%ICON_PATH%" (
-    set ICON_ARG=-IconLocation '%ICON_PATH%,0'
-) else (
-    set ICON_ARG=
-)
 
 echo 正在创建桌面快捷方式...
 
@@ -33,7 +27,7 @@ if %errorlevel% equ 0 (
     echo [OK] 桌面快捷方式创建成功
     echo.
     echo 快捷方式位置: %SHORTCUT%
-    echo 现在可以双击桌面上的 "Claude Launcher" 启动程序
+    echo 现在可以双击桌面上的 "ClaudeLauncher.exe" 启动程序
 ) else (
     echo [错误] 创建快捷方式失败
     echo 请手动创建，目标文件: "%EXE_PATH%"

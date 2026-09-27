@@ -72,7 +72,7 @@ Claude Code 在终端里很好用，但在 Windows 上每次都要：
 2. 同时下载 `install.bat`
 3. 将两个文件放在同一目录（推荐 `C:\Program Files\ClaudeLauncher\`）
 4. 双击 `install.bat` 创建桌面快捷方式
-5. 双击桌面上的 **Claude Launcher** 启动
+5. 双击桌面上的 **ClaudeLauncher.exe** 启动
 
 ### 方式二：从源码运行
 

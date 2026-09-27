@@ -15,7 +15,7 @@ v2.0.0 为支持 Claude Code / Codex CLI / MiMo Code 三个工具引入了大量
 - **工具选择器** —— 顶部整条工具栏，窗口高度因此减少 44px
 - **「最近目录」与「清除历史」** —— 该功能在界面上从未被渲染过，「清除历史」按钮点了没有任何反应
 - **两处死代码** —— `FavoriteItem` 与 `FolderGroup` 两个类从未被实例化
-- **三套并行的安装脚本与命名** —— 原先窗口标题叫「AI Coding Launcher」、类名与文件名是「ClaudeLauncher」、快捷方式又是「Claude Launcher」，现统一为 **Claude Launcher**
+- **三套并行的安装脚本与命名** —— 原先窗口标题叫「AI Coding Launcher」、类名与文件名是「ClaudeLauncher」、三个安装脚本各自创建的快捷方式名还都不一样（`Claude Launcher.lnk` 与 `AI Coding Launcher.lnk`）。现合并为单一 `install.bat`，创建的快捷方式名统一为 `ClaudeLauncher.exe.lnk`；窗口标题、包名、可执行文件名统一为 **Claude Launcher / ClaudeLauncher**
 
 ## 修复的缺陷
 
