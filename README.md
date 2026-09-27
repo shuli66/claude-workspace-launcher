@@ -204,7 +204,7 @@ claude-launcher/
 ## 常见问题
 
 **快捷方式图标显示异常**
-重新运行 `install.bat`。Windows 会缓存快捷方式图标，删除旧快捷方式后重建通常可解决。
+重新运行 `install.bat`。图标取自 exe 自身的内嵌资源，不依赖 `assets/` 目录。若仍不显示，是 Windows 缓存了旧图标——删除桌面快捷方式后重新运行 `install.bat` 即可。
 
 **窗口打开了但 Claude Code 没启动**
 确认 `claude` 命令在 PATH 中：在 PowerShell 里运行 `claude --version`。也确认所选目录真实存在。

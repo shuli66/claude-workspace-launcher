@@ -3700,23 +3700,18 @@ echo.
 
 set SHORTCUT=%USERPROFILE%\Desktop\ClaudeLauncher.exe.lnk
 set EXE_PATH=%~dp0ClaudeLauncher.exe
-set ICON_PATH=%~dp0assets\claude_icon.ico
-
-if exist "%ICON_PATH%" (
-    set ICON_ARG=-IconLocation '%ICON_PATH%,0'
-) else (
-    set ICON_ARG=
-)
 
 echo 正在创建桌面快捷方式...
 
-powershell -Command "$shell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $s = $shell.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%EXE_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Claude Launcher'; if (Test-Path '%ICON_PATH%') { $s.IconLocation = '%ICON_PATH%,0' }; $s.Save()"
+rem 图标取自 exe 自身的内嵌资源（',0' 表示第 0 号图标）。
+rem 不依赖 assets\ 目录 —— 分发时只需 exe 与本脚本两个文件。
+powershell -Command "$shell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $s = $shell.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%EXE_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Claude Launcher'; $s.IconLocation = '%EXE_PATH%,0'; $s.Save()"
 
 if %errorlevel% equ 0 (
     echo [OK] 桌面快捷方式创建成功
     echo.
     echo 快捷方式位置: %SHORTCUT%
-    echo 现在可以双击桌面上的 "Claude Launcher" 启动程序
+    echo 现在可以双击桌面上的 "ClaudeLauncher.exe" 启动程序
 ) else (
     echo [错误] 创建快捷方式失败
     echo 请手动创建，目标文件: "%EXE_PATH%"

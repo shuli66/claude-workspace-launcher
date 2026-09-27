@@ -17,11 +17,12 @@ echo.
 
 set SHORTCUT=%USERPROFILE%\Desktop\ClaudeLauncher.exe.lnk
 set EXE_PATH=%~dp0ClaudeLauncher.exe
-set ICON_PATH=%~dp0assets\claude_icon.ico
 
 echo 正在创建桌面快捷方式...
 
-powershell -Command "$shell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $s = $shell.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%EXE_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Claude Launcher'; if (Test-Path '%ICON_PATH%') { $s.IconLocation = '%ICON_PATH%,0' }; $s.Save()"
+rem 图标取自 exe 自身的内嵌资源（',0' 表示第 0 号图标）。
+rem 不依赖 assets\ 目录 —— 分发时只需 exe 与本脚本两个文件。
+powershell -Command "$shell = New-Object -ComObject WScript.Shell; if (Test-Path '%SHORTCUT%') { Remove-Item '%SHORTCUT%' -Force }; $s = $shell.CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%EXE_PATH%'; $s.WorkingDirectory = '%~dp0'; $s.Description = 'Claude Launcher'; $s.IconLocation = '%EXE_PATH%,0'; $s.Save()"
 
 if %errorlevel% equ 0 (
     echo [OK] 桌面快捷方式创建成功
