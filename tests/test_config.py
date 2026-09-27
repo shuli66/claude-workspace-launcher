@@ -104,3 +104,19 @@ def test_save_then_load_roundtrips(tmp_path):
     again.load()
     assert again.get("last_mode") == "skip"
     assert again.get("favorites") == ["D:\\proj"]
+
+
+def test_in_place_edit_does_not_leak_into_defaults(tmp_path):
+    """就地修改 get() 取出的列表，不得污染后续实例的默认值。
+
+    回归防护：若默认值用 dict(SCHEMA) 浅拷贝，所有实例会共享同一个
+    favorites 列表对象，一处 append 就会让「配置文件不存在」返回脏数据。
+    """
+    cfg = Config(tmp_path / "a.json")
+    cfg.load()
+    cfg.get("favorites").append("D:\\leaked")
+
+    fresh = Config(tmp_path / "not-there.json")
+    fresh.load()
+    assert fresh.get("favorites") == []
+    assert cfg.get("last_mode") == "normal"

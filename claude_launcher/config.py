@@ -19,6 +19,19 @@ SCHEMA: Dict[str, Any] = {
 }
 
 
+def _defaults() -> Dict[str, Any]:
+    """SCHEMA 的独立副本。
+
+    必须逐键复制可变值：dict(SCHEMA) 是浅拷贝，会让所有实例共享
+    SCHEMA["favorites"] 那同一个列表对象，调用方就地修改它就会污染
+    进程级默认值——此后「配置文件不存在」也返回被污染的数据。
+    """
+    return {
+        key: (list(value) if isinstance(value, list) else value)
+        for key, value in SCHEMA.items()
+    }
+
+
 def normalize_path(path: Any) -> str:
     """清理粘贴来的目录路径，兼容 Windows「复制为路径」的引号包裹。"""
     if not isinstance(path, str):
@@ -40,11 +53,11 @@ class Config:
 
     def __init__(self, path: Optional[Path] = None):
         self.path = Path(path) if path is not None else DEFAULT_PATH
-        self.data: Dict[str, Any] = dict(SCHEMA)
+        self.data: Dict[str, Any] = _defaults()
         self.warning: Optional[str] = None
 
     def load(self) -> None:
-        self.data = dict(SCHEMA)
+        self.data = _defaults()
         self.warning = None
 
         if not self.path.exists():
