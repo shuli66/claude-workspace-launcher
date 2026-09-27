@@ -362,7 +362,7 @@ class FolderGroupRow(tk.Frame):
     """可折叠的项目分组。标题行 + 子会话行容器。"""
 
     def __init__(self, parent, project_path, sessions, colors, on_select,
-                 on_resume, on_delete, on_open, on_double_click, on_toggle,
+                 on_resume, on_delete, on_double_click, on_toggle,
                  expanded=True):
         super().__init__(parent, bg=colors["bg"])
 
@@ -370,7 +370,6 @@ class FolderGroupRow(tk.Frame):
         self.sessions = sessions
         self.colors = colors
         self.expanded = expanded
-        self.on_open = on_open
         self.on_toggle = on_toggle
 
         header = tk.Frame(self, bg=colors["bg"], height=28)
