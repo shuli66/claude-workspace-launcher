@@ -314,11 +314,15 @@ mockup 中 11px 圆角卡片在 tkinter 里**无法直接实现**。tkinter 没�
 | 快捷方式 | `Claude Launcher.lnk` |
 | 配置文件 | `~/.claude_launcher_config.json`（路径不变，无需迁移） |
 
+`claude_icon.ico` 从仓库根目录移入 `assets/`，与新增的 `claude-mark.png` 并列。
+需同步更新三处引用：`ui/window.py` 的窗口图标加载路径、`ui/icons.py` 的标志位图路径、
+`build.py` 的 `--add-data` 与 `--icon` 参数。
+
 安装脚本三个（`install.ps1`、`install.bat`、`install_exe.bat`）合并为一个
 `install.bat`，只创建 `Claude Launcher.lnk`（当前 `install.ps1` 建的是旧名
 "Claude Launcher"、`install_exe.bat` 建的是 "AI Coding Launcher"，两套并存互相矛盾）。
 
-`build.py` 需增加 `--add-data` 以打包 `assets/claude-mark.png`。
+`build.py` 需以 `--add-data` 打包整个 `assets/` 目录（否则运行时会因找不到图标而报错）。
 
 ## 11. 不做的事
 
