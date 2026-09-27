@@ -3245,12 +3245,22 @@ class MainWindow:
         pass  # 由 app 层注入
 
     def rebuild_theme(self):
-        """主题切换是唯一走全量重建的路径——颜色写死在控件构造参数上。"""
+        """主题切换是唯一走全量重建的路径——颜色写死在控件构造参数上。
+
+        _build_path_bar 会创建全新的 dir_var，故必须先把用户已输入的路径
+        存下来、重建后还原 —— 否则切一次主题就把用户的工作目录清空了。
+        （collapsed_projects 只在 __init__ 里初始化，不经骨架重建，故不受影响。）
+        """
+        current_dir = self.dir_var.get()
+
         self.colors = theme.resolve(self.config.get("theme", "auto"))
         self.root.configure(bg=self.colors["bg"])
         for child in self.root.winfo_children():
             child.destroy()
         self._build_skeleton()
+
+        if current_dir:
+            self.dir_var.set(current_dir)
         self.refresh_sessions()
         self.refresh_favorites()
         self._update_current_card()
