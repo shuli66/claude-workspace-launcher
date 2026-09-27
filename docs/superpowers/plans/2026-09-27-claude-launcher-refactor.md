@@ -2441,12 +2441,9 @@ git commit -m "feat: 添加会话行、项目分组行与收藏行控件"
 """
 
 import tkinter as tk
-from typing import Callable, Dict, List
 
 from .. import agent
 from .widgets import FlatButton
-
-DIALOG_BG_KEY = "bg"
 
 
 def _center_on_parent(window, parent, width, height):
