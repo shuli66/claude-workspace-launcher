@@ -203,13 +203,22 @@ _PAINTERS = {
 
 
 def draw(canvas, name, color, size, x=0, y=0):
-    """在 canvas 的 (x, y) 处绘制边长为 size 的图标。未知名字静默忽略。"""
+    """在 canvas 的 (x, y) 处绘制边长为 size 的图标。未知名字静默忽略。
+
+    所有新建图元都打上 "icon" 标签，调用方据此用 canvas.delete("icon")
+    清除上一个图标再重绘 —— 悬停换色与 star/star_filled 切换都依赖这一点。
+    缺了打标签，delete("icon") 删不掉任何东西，图元会在画布上不断累积。
+    """
     width = max(1, round(size / 8))
+    existing = set(canvas.find_all())
 
     if name in ("star", "star_filled"):
         _draw_star(canvas, x, y, size, color, width, name == "star_filled")
-        return
+    else:
+        painter = _PAINTERS.get(name)
+        if painter:
+            painter(canvas, x, y, size, color, width)
 
-    painter = _PAINTERS.get(name)
-    if painter:
-        painter(canvas, x, y, size, color, width)
+    created = [item for item in canvas.find_all() if item not in existing]
+    for item in created:
+        canvas.addtag_withtag("icon", item)

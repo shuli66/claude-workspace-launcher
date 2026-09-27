@@ -27,9 +27,21 @@ def main():
     for index, name in enumerate(NAMES):
         icons.draw(canvas, name, "#d97757", 24, x=10 + (index % 7) * 32, y=10 + (index // 7) * 40)
 
+    # 回归保护：draw() 必须给图元打 "icon" 标签，否则 delete("icon") 无效，
+    # IconButton 悬停换色与 star/star_filled 切换都会在画布上累积图元。
+    canvas.delete("all")
+    icons.draw(canvas, "star", "#d97757", 24, x=4, y=4)
+    first = len(canvas.find_all())
+    canvas.delete("icon")
+    after_delete = len(canvas.find_all())
+    assert first > 0, "draw() 未在画布上创建任何图元"
+    assert after_delete == 0, (
+        "delete('icon') 未清除图元：draw() 未打 icon 标签（%d → %d）" % (first, after_delete)
+    )
+
     print("claude_mark:", icons.claude_mark() is not None)
     print("assets_dir:", icons.assets_dir())
-    print("已绘制 %d 个图标，无异常" % len(NAMES))
+    print("已绘制 %d 个图标，无异常；icon 标签回归检查通过" % len(NAMES))
     root.destroy()
 
 
