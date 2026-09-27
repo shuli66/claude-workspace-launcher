@@ -77,7 +77,11 @@ __version__ = "2.1.0"
 `claude_launcher/ui/__init__.py`:
 
 ```python
-"""界面层：只依赖 theme 与传入数据，不直接读写文件系统。"""
+"""界面层：只依赖 theme 与传入数据。
+
+例外：ui/icons.py 会读取 assets/ 下的图标资源文件，这是界面层唯一允许触碰
+文件系统的地方 —— 图标资源属于界面本身，不是业务数据。
+"""
 ```
 
 - [ ] **Step 2: 创建 pytest 配置**
@@ -89,7 +93,11 @@ __version__ = "2.1.0"
 testpaths = tests
 python_files = test_*.py
 python_functions = test_*
+pythonpath = .
 ```
+
+`pythonpath = .` 让仓库根目录进入 `sys.path`，使裸 `pytest` 调用（IDE、CI）
+也能 `import claude_launcher`，不依赖 `python -m pytest` 的 cwd 副作用。
 
 - [ ] **Step 3: 添加 pytest 缓存到 .gitignore**
 
@@ -102,7 +110,7 @@ python_functions = test_*
 
 - [ ] **Step 4: 创建临时入口并验证包可导入**
 
-`main.py` 先写最小可运行版本，Task 10 会替换为完整入口：
+`main.py` 先写最小可运行版本，Task 11 会替换为完整入口：
 
 ```python
 """Claude Launcher 启动入口。"""
@@ -1339,6 +1347,18 @@ if __name__ == "__main__":
 
 - [ ] **Step 2: 移动图标并运行生成脚本**
 
+`.gitignore` 现有规则 `*.png` 会忽略 `assets/claude-mark.png`，导致下一步
+`git add assets/` 静默漏掉它，最终打包出的 exe 缺少 Claude 标志。
+先放行 assets 目录下的资源文件：
+
+```bash
+printf '\n# Keep packaged assets\n!assets/*.png\n!assets/*.ico\n' >> .gitignore
+git add .gitignore
+git commit -m "chore: 放行 assets 目录下的图标资源"
+```
+
+再移动图标并生成位图：
+
 ```bash
 mkdir -p assets
 git mv claude_icon.ico assets/claude_icon.ico
@@ -1347,13 +1367,15 @@ python tools/make_mark.py
 
 Expected: 输出 `已写入 .../assets/claude-mark.png`，且 `assets/claude-mark.png` 存在
 
-- [ ] **Step 3: 验证位图有效**
+- [ ] **Step 3: 验证位图有效且未被忽略**
 
 ```bash
 python -c "from PIL import Image; im=Image.open('assets/claude-mark.png'); print(im.size, im.mode); print('corner alpha:', im.getpixel((0,0))[3])"
+git check-ignore -q assets/claude-mark.png && echo "错误：PNG 仍被忽略" || echo "PNG 未被忽略，可提交"
 ```
 
-Expected: 尺寸约 128×128，mode 为 `RGBA`，左上角 alpha 为 0（背景已透明）
+Expected: 尺寸约 128×128，mode 为 `RGBA`，左上角 alpha 为 0（背景已透明）；
+且输出 `PNG 未被忽略，可提交`
 
 - [ ] **Step 4: 实现 icons.py**
 
