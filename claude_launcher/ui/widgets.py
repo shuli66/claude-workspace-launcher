@@ -61,11 +61,16 @@ class RoundedFrame(tk.Canvas):
 
         self.inner = tk.Frame(self, bg=fill)
         self._win = self.create_window(border_width, border_width, window=self.inner, anchor="nw")
+        # 注意：tkinter 内部用 self._w 存控件路径名，这里绝不可占用 _w/_h，
+        # 故用 _cur_w/_cur_h 记录 Configure 事件给的实际尺寸。
+        self._cur_w = 0
+        self._cur_h = 0
         self.inner.bind("<Configure>", self._on_inner_config)
         self.bind("<Configure>", self._on_canvas_config)
 
     def _on_canvas_config(self, event):
         """宽度自上而下：Canvas 被拉伸时，inner 跟随宽度，重绘背景。"""
+        self._cur_w = event.width
         inner_w = max(1, event.width - 2 * self._bw)
         if int(self.itemcget(self._win, "width")) != inner_w:
             self.itemconfig(self._win, width=inner_w)
@@ -74,14 +79,19 @@ class RoundedFrame(tk.Canvas):
     def _on_inner_config(self, event):
         """高度自下而上：inner 内容变高时，Canvas 跟随，重绘背景。"""
         h = event.height + 2 * self._bw
+        self._cur_h = h
         if int(self.cget("height")) != h:
             self.config(height=h)
         self._redraw()
 
     def _redraw(self):
+        # 必须用 Configure 事件记录的实际尺寸：cget("width") 返回的是配置值，
+        # pack(fill=X) 拉伸后它仍是旧值，圆角背景就会画得比控件窄。
+        w = self._cur_w or int(self.cget("width"))
+        h = self._cur_h or int(self.cget("height"))
+        if w <= 1 or h <= 1:
+            return
         self.delete("bg")
-        w = int(self.cget("width"))
-        h = int(self.cget("height"))
 
         if self._border is not None:
             self.create_polygon(
@@ -227,12 +237,21 @@ class FlatButton(tk.Canvas):
 
 
 class IconButton(tk.Canvas):
-    """正方形图标按钮。图标在 Canvas 上绘制，悬停时换底色。"""
+    """正方形图标按钮。图标在 Canvas 上绘制，悬停时换底色。
+
+    底色取父容器背景而非硬编码 surface —— 否则放在顶栏（bg 色）或
+    卡片上时会露出一块白色方角补丁。
+    """
 
     def __init__(self, parent, name, command, colors, size=28, tooltip=None):
+        try:
+            parent_bg = parent.cget("bg")
+        except tk.TclError:
+            parent_bg = colors["surface"]
+        self._parent_bg = parent_bg
         super().__init__(
             parent, width=size, height=size,
-            bg=colors["surface"], highlightthickness=0, cursor="hand2",
+            bg=parent_bg, highlightthickness=0, cursor="hand2",
         )
         self.colors = colors
         self.name = name
@@ -240,7 +259,7 @@ class IconButton(tk.Canvas):
         self.size = size
         self._tooltip = tooltip
 
-        self._background = self.create_rectangle(0, 0, size, size, fill=colors["surface"], outline="")
+        self._background = self.create_rectangle(0, 0, size, size, fill=parent_bg, outline="")
         self._draw_icon(colors["ink_2"])
 
         self.bind("<Enter>", self._on_enter)
@@ -257,15 +276,15 @@ class IconButton(tk.Canvas):
         self._draw_icon(self.colors["ink"])
 
     def _on_leave(self, _event):
-        self.itemconfig(self._background, fill=self.colors["surface"])
+        self.itemconfig(self._background, fill=self._parent_bg)
         self.delete("icon")
         self._draw_icon(self.colors["ink_2"])
 
     def set_colors(self, colors):
         """主题切换后就地更新，避免重建控件树。"""
         self.colors = colors
-        self.config(bg=colors["surface"])
-        self.itemconfig(self._background, fill=colors["surface"])
+        self.config(bg=self._parent_bg)
+        self.itemconfig(self._background, fill=self._parent_bg)
         self.delete("icon")
         self._draw_icon(colors["ink_2"])
 

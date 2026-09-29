@@ -16,6 +16,26 @@ MAX_SESSIONS_PER_PROJECT = 10
 MAX_PROJECTS = 20
 PROMPT_LIMIT = 80
 
+# 会话 jsonl 里 type 为 user 的条目不一定是用户真的输入：harness 会注入
+# 包装消息（<local-command-caveat>、<command-name>、system-reminder 等），
+# 它们若被当作「首个提问」展示，列表里就会出现无意义的标签文本。
+_NOISE_MARKERS = (
+    "<local-command-caveat>",
+    "<local-command-stdout>",
+    "<command-name>",
+    "<command-message>",
+    "<command-args>",
+    "<system-reminder>",
+    "<task-notification>",
+)
+
+
+def _is_noise(text):
+    stripped = text.strip()
+    if not stripped:
+        return True
+    return stripped.startswith(_NOISE_MARKERS)
+
 
 def _read_json_lines(path: str):
     try:
@@ -46,13 +66,15 @@ def extract_first_prompt(jsonl_file: str) -> str:
 
         content = (obj.get("message") or {}).get("content", "")
         if isinstance(content, str) and content:
-            return content[:PROMPT_LIMIT]
+            if not _is_noise(content):
+                return content[:PROMPT_LIMIT]
+            continue
 
         if isinstance(content, list):
             for block in content:
                 if isinstance(block, dict) and block.get("type") == "text":
                     text = block.get("text", "")
-                    if text:
+                    if text and not _is_noise(text):
                         return text[:PROMPT_LIMIT]
     return ""
 

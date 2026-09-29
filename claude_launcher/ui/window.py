@@ -114,6 +114,9 @@ class MainWindow:
 
         mark = icons.claude_mark()
         if mark is not None:
+            # 位图原始 128px，顶栏只有 46px 高。Tk 不裁剪子控件，
+            # 原尺寸塞进去会溢出成一横条糊状——必须缩放到栏高以内。
+            mark = mark.subsample(5, 5)
             holder = tk.Frame(parent, bg=colors["bg"])
             holder.pack(side=tk.LEFT, padx=(14, 9), pady=10)
             logo = tk.Label(holder, image=mark, bg=colors["bg"])
