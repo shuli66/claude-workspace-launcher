@@ -195,13 +195,17 @@ def main():
         app = LauncherApp(root, single_instance)
         root.mainloop()
     except Exception as exc:
+        import tempfile
         import traceback
+        from pathlib import Path
 
-        traceback.print_exc()
+        # windowed 模式无 stderr，traceback 无处可见——写入临时文件供排查。
+        log = Path(tempfile.gettempdir()) / "claude_launcher_error.log"
+        log.write_text(traceback.format_exc(), encoding="utf-8")
         try:
             messagebox.showerror(
                 "Claude Launcher 启动失败",
-                "程序遇到未处理的错误：\n\n%s\n\n详情已输出到标准错误。" % exc,
+                "程序遇到未处理的错误：\n\n%s\n\n详情已写入 %s" % (exc, log),
             )
         except Exception:
             pass
