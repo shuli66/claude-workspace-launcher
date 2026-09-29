@@ -98,6 +98,17 @@ class MainWindow:
         self.session_area = ScrollArea(self.sidebar, colors)
         self.session_area.pack(fill=tk.BOTH, expand=True, padx=6, pady=(0, 8))
 
+        # 设计稿侧栏底部的操作提示
+        hint = tk.Frame(self.sidebar, bg=colors["bg"])
+        hint.pack(fill=tk.X, padx=10, pady=(0, 8))
+        hint_icon = tk.Canvas(hint, width=12, height=12, bg=colors["bg"], highlightthickness=0)
+        hint_icon.pack(side=tk.LEFT, padx=(0, 5))
+        icons.draw(hint_icon, "clock", colors["ink_3"], 11, x=1, y=1)
+        tk.Label(
+            hint, text="单击选中 · 双击恢复", font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
+        ).pack(side=tk.LEFT)
+
         divider = tk.Frame(columns, bg=colors["line"], width=1)
         divider.pack(side=tk.LEFT, fill=tk.Y)
 
@@ -165,12 +176,6 @@ class MainWindow:
             insertbackground=colors["ink"], bd=0,
         )
         self.dir_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
-
-        self.path_state = tk.Label(
-            inner, text="", font=("Segoe UI", 8),
-            bg=colors["surface"], fg=colors["ink_3"], padx=6,
-        )
-        self.path_state.pack(side=tk.RIGHT)
 
         FlatButton(inner, "浏览", self.browse_directory, colors, variant="ghost").pack(
             side=tk.RIGHT, padx=(0, 6), pady=4)
@@ -438,18 +443,8 @@ class MainWindow:
 
     def _validate_path(self):
         self.validation_job = None
-        path = self.dir_var.get().strip()
-
-        if not path:
-            self.path_state.config(text="")
-            self._update_current_card()
-            return
-
-        if agent.is_valid_directory(path):
-            self.path_state.config(text="✓ 可用", fg=self.colors["ok"])
-        else:
-            self.path_state.config(text="✕ 无效", fg=self.colors["danger"])
-
+        # 路径有效性由当前项目卡片的徽标展示（设计稿如此），
+        # 路径栏本身不再重复显示 ✓/✕。
         self._update_current_card()
 
     def _update_current_card(self):

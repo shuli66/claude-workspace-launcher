@@ -59,6 +59,11 @@ def extract_cwd(jsonl_file: str) -> str:
     return ""
 
 
+def _one_line(text):
+    """会话行高固定，多行文本会被垂直居中裁剪成半截字——压成单行。"""
+    return " ".join(text.split())
+
+
 def extract_first_prompt(jsonl_file: str) -> str:
     for obj in _read_json_lines(jsonl_file):
         if not isinstance(obj, dict) or obj.get("type") != "user":
@@ -67,7 +72,7 @@ def extract_first_prompt(jsonl_file: str) -> str:
         content = (obj.get("message") or {}).get("content", "")
         if isinstance(content, str) and content:
             if not _is_noise(content):
-                return content[:PROMPT_LIMIT]
+                return _one_line(content)[:PROMPT_LIMIT]
             continue
 
         if isinstance(content, list):
@@ -75,7 +80,7 @@ def extract_first_prompt(jsonl_file: str) -> str:
                 if isinstance(block, dict) and block.get("type") == "text":
                     text = block.get("text", "")
                     if text and not _is_noise(text):
-                        return text[:PROMPT_LIMIT]
+                        return _one_line(text)[:PROMPT_LIMIT]
     return ""
 
 

@@ -75,10 +75,8 @@ print("\n=== 2-3. 路径校验与当前项目卡片 ===")
 w.dir_var.set(str(tmp / "my-app")); root.update(); w._validate_path()
 check(2, "有效目录：徽标「可用」", w.current_state._text == "可用")
 check(2, "有效目录：卡片显示项目名", w.current_name.cget("text") == "my-app")
-check(2, "有效目录：路径栏显示 ✓ 可用", "可用" in w.path_state.cget("text"))
 w.dir_var.set(str(tmp / "nope")); root.update(); w._validate_path()
 check(3, "无效目录：徽标「无效」", w.current_state._text == "无效")
-check(3, "无效目录：路径栏显示 ✕ 无效", "无效" in w.path_state.cget("text"))
 
 print("\n=== 4-5. 会话选中与恢复 ===")
 sess = groups()[0].sessions[0]

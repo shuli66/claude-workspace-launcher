@@ -402,6 +402,10 @@ class ScrollArea(tk.Frame):
         self.canvas.bind("<Leave>", self._unbind_wheel)
 
     def _on_content_configure(self, _event):
+        # 只同步滚动区，不要给 window item 设高度：item 的高度必须跟随
+        # content 的自然请求高度。若反过来用 content 的当前高度去设 item，
+        # 会形成循环约束（item 高度压缩 content → content 再报更矮的高度），
+        # 收敛到极小值，把列表行压成 1px。
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def _on_canvas_configure(self, event):
@@ -414,11 +418,26 @@ class ScrollArea(tk.Frame):
         self.canvas.unbind_all("<MouseWheel>")
 
     def _on_wheel(self, event):
+        # 内容不比视口高时滚动无意义，且旧滚动区下会产生视图偏移空白。
+        bbox = self.canvas.bbox("all")
+        if not bbox or bbox[3] <= self.canvas.winfo_height():
+            return
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def refresh_scrollregion(self):
         self.canvas.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # 内容变矮后旧的 yview 偏移会把内容顶到中间，上下留大片空白。
+        # 重算滚动区后把视图夹回合法范围。
+        try:
+            top, _bottom = self.canvas.yview()
+            if top > 0.0:
+                self.canvas.yview_moveto(min(top, 1.0))
+                top2, _b2 = self.canvas.yview()
+                if top2 >= 1.0:
+                    self.canvas.yview_moveto(0.0)
+        except tk.TclError:
+            pass
 
     def clear(self):
         for child in self.content.winfo_children():
@@ -437,12 +456,20 @@ def format_size(size):
 
 
 def format_time(mtime):
-    from datetime import datetime
+    """设计稿的时间格式：今天 14:32、昨天「昨天」、更早 09-25。"""
+    from datetime import datetime, timedelta
 
     try:
-        return datetime.fromtimestamp(mtime).strftime("%m-%d %H:%M")
-    except (ValueError, OSError, OverflowError):
+        dt = datetime.fromtimestamp(mtime)
+    except (ValueError, OSError, OverflowError, TypeError):
         return ""
+
+    today = datetime.now().date()
+    if dt.date() == today:
+        return dt.strftime("%H:%M")
+    if dt.date() == today - timedelta(days=1):
+        return "昨天"
+    return dt.strftime("%m-%d")
 
 
 def elide_path(path, limit=35):
@@ -556,6 +583,12 @@ class FolderGroupRow(tk.Frame):
         self.chevron.pack(side=tk.LEFT, padx=(4, 2))
         self._draw_chevron()
 
+        self.folder_icon = tk.Canvas(
+            header, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+        )
+        self.folder_icon.pack(side=tk.LEFT, padx=(0, 4))
+        icons.draw(self.folder_icon, "folder", colors["ink_3"], 13, x=1, y=1)
+
         self.name_label = tk.Label(
             header, text=os.path.basename(project_path) or project_path,
             font=("Segoe UI", 9, "bold"), bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
@@ -581,7 +614,8 @@ class FolderGroupRow(tk.Frame):
         if self.expanded:
             self.children_frame.pack(fill=tk.X)
 
-        for widget in (header, self.name_label, self.count_label, self.chevron):
+        for widget in (header, self.name_label, self.count_label, self.chevron,
+                       self.folder_icon):
             widget.bind("<Button-1>", self._toggle)
             widget.bind("<Double-Button-1>", lambda _event: on_double_click(project_path))
             widget.bind("<Enter>", self._hover_in)
@@ -599,11 +633,15 @@ class FolderGroupRow(tk.Frame):
         self.header.config(bg=self.colors["hover"])
         self.name_label.config(bg=self.colors["hover"])
         self.count_label.config(bg=self.colors["hover"])
+        self.chevron.config(bg=self.colors["hover"])
+        self.folder_icon.config(bg=self.colors["hover"])
 
     def _hover_out(self, _event):
         self.header.config(bg=self.colors["bg"])
         self.name_label.config(bg=self.colors["bg"])
         self.count_label.config(bg=self.colors["bg"])
+        self.chevron.config(bg=self.colors["bg"])
+        self.folder_icon.config(bg=self.colors["bg"])
 
     def _toggle(self, _event):
         self.expanded = not self.expanded
@@ -654,9 +692,20 @@ class FavoriteRow(RoundedFrame):
 
         remove = tk.Label(
             actions, text="✕", font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], padx=6, cursor="hand2",
+            bg=colors["bg"], fg=colors["bg"], padx=6, cursor="hand2",
         )
         remove.pack(side=tk.RIGHT)
         remove.bind("<Button-1>", lambda _event: on_remove(path))
         remove.bind("<Enter>", lambda _event: remove.config(fg=colors["danger"]))
-        remove.bind("<Leave>", lambda _event: remove.config(fg=colors["ink_3"]))
+        remove.bind("<Leave>", lambda _event: remove.config(fg=colors["bg"]))
+
+        # 设计稿里 ✕ 只在悬停整行时出现。逐控件绑定 Enter/Leave：
+        # Tk 的 Enter/Leave 按最内层控件派发，祖先会收到 Leave，
+        # 故需递归绑到每个子控件上（add="+" 保留 FlatButton 自身的悬停处理）。
+        def _reveal(node):
+            if node is not remove:
+                node.bind("<Enter>", lambda _e: remove.config(fg=colors["ink_3"]), add="+")
+                node.bind("<Leave>", lambda _e: remove.config(fg=colors["bg"]), add="+")
+            for child in node.winfo_children():
+                _reveal(child)
+        _reveal(self.inner)
