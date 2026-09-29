@@ -478,12 +478,20 @@ def elide_path(path, limit=35):
     return "..." + path[-(limit - 3):]
 
 
-class SessionRow(tk.Frame):
-    """会话列表的一行。单击选中，双击恢复。"""
+class SessionRow(RoundedFrame):
+    """会话列表的一行。单击选中，双击恢复。
+
+    设计稿里行的选中/悬停背景是圆角 + 左侧 2px 强调色条，
+    故整行用 RoundedFrame 承载。
+    """
+
+    _HEIGHT = 26
 
     def __init__(self, parent, session, colors, on_select, on_resume, on_delete):
-        super().__init__(parent, bg=colors["bg"], height=26)
-        self.pack_propagate(False)
+        super().__init__(parent, colors, fill=colors["bg"], border=None,
+                         radius=7, parent_bg=colors["bg"])
+        self.inner.config(height=self._HEIGHT)
+        self.inner.pack_propagate(False)
 
         self.session = session
         self.colors = colors
@@ -492,11 +500,11 @@ class SessionRow(tk.Frame):
         self.on_delete = on_delete
         self._selected = False
 
-        self.accent_bar = tk.Frame(self, bg=colors["bg"], width=2)
+        self.accent_bar = tk.Frame(self.inner, bg=colors["bg"], width=2)
         self.accent_bar.pack(side=tk.LEFT, fill=tk.Y)
 
         self.title = tk.Label(
-            self,
+            self.inner,
             text=session.get("prompt") or session.get("id", ""),
             font=("Segoe UI", 9),
             bg=colors["bg"], fg=colors["ink_2"],
@@ -505,18 +513,18 @@ class SessionRow(tk.Frame):
         self.title.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.time_label = tk.Label(
-            self, text=format_time(session.get("mtime", 0)),
+            self.inner, text=format_time(session.get("mtime", 0)),
             font=("Segoe UI", 8), bg=colors["bg"], fg=colors["ink_3"], padx=5,
         )
         self.time_label.pack(side=tk.RIGHT)
 
         self.delete_btn = tk.Label(
-            self, text="✕", font=("Segoe UI", 8),
+            self.inner, text="✕", font=("Segoe UI", 8),
             bg=colors["bg"], fg=colors["bg"], padx=4, cursor="hand2",
         )
         self.delete_btn.pack(side=tk.RIGHT)
 
-        for widget in (self, self.title, self.time_label):
+        for widget in (self, self.inner, self.title, self.time_label):
             widget.bind("<Button-1>", self._click)
             widget.bind("<Double-Button-1>", self._double_click)
             widget.bind("<Enter>", self._hover_in)
@@ -525,15 +533,15 @@ class SessionRow(tk.Frame):
         self.delete_btn.bind("<Button-1>", lambda _event: self.on_delete(self.session))
         self.delete_btn.bind("<Enter>", lambda _event: self.delete_btn.config(fg=colors["danger"]))
         self.delete_btn.bind("<Leave>", lambda _event: self.delete_btn.config(
-            fg=colors["danger"] if self._selected else colors["bg"]))
+            fg=colors["danger"] if self._selected else self._background()))
 
     def _background(self):
         return self.colors["accent_soft"] if self._selected else self.colors["bg"]
 
     def _paint(self, background):
-        for widget in (self, self.title, self.time_label, self.delete_btn):
-            widget.config(bg=background)
-        self.accent_bar.config(bg=self.colors["accent"] if self._selected else background)
+        self.set_fill(background)
+        self.accent_bar.config(
+            bg=self.colors["accent"] if self._selected else background)
         self.delete_btn.config(
             fg=self.colors["danger"] if self._selected else background)
 
