@@ -12,6 +12,7 @@ from .widgets import (
     FavoriteRow,
     IconButton,
     Pill,
+    RoundedFrame,
     ScrollArea,
     SectionHeader,
     elide_path,
@@ -141,15 +142,16 @@ class MainWindow:
 
     def _build_path_bar(self):
         colors = self.colors
-        bar = tk.Frame(self.main, bg=colors["line"], padx=1, pady=1)
+        bar = RoundedFrame(
+            self.main, colors, fill=colors["surface"], border=colors["line"], radius=8,
+        )
         bar.pack(fill=tk.X, padx=16, pady=(16, 10))
 
-        inner = tk.Frame(bar, bg=colors["surface"], height=36)
-        inner.pack(fill=tk.X)
-        inner.pack_propagate(False)
+        inner = bar.inner
+        inner.config(bg=colors["surface"])
 
         icon = tk.Canvas(inner, width=18, height=18, bg=colors["surface"], highlightthickness=0)
-        icon.pack(side=tk.LEFT, padx=(10, 6))
+        icon.pack(side=tk.LEFT, padx=(10, 6), pady=9)
         icons.draw(icon, "folder", colors["ink_3"], 14, x=2, y=2)
 
         self.dir_var = tk.StringVar()
@@ -172,13 +174,18 @@ class MainWindow:
 
     def _build_current_card(self):
         colors = self.colors
-        self.current_card = tk.Frame(self.main, bg=colors["line"], padx=1, pady=1)
+        self.current_card = RoundedFrame(
+            self.main, colors, fill=colors["bg"], border=colors["line"], radius=11,
+        )
         self.current_card.pack(fill=tk.X, padx=16, pady=(0, 14))
 
-        inner = tk.Frame(self.current_card, bg=colors["bg"])
-        inner.pack(fill=tk.X, padx=14, pady=12)
+        inner = self.current_card.inner
+        inner.config(bg=colors["bg"])
 
-        head = tk.Frame(inner, bg=colors["bg"])
+        inner_pad = tk.Frame(inner, bg=colors["bg"])
+        inner_pad.pack(fill=tk.X, padx=14, pady=12)
+
+        head = tk.Frame(inner_pad, bg=colors["bg"])
         head.pack(fill=tk.X)
 
         text = tk.Frame(head, bg=colors["bg"])
@@ -199,7 +206,7 @@ class MainWindow:
         self.current_state = Pill(head, "未选择", colors, tone="neutral")
         self.current_state.pack(side=tk.RIGHT, anchor=tk.N)
 
-        actions = tk.Frame(inner, bg=colors["bg"])
+        actions = tk.Frame(inner_pad, bg=colors["bg"])
         actions.pack(fill=tk.X, pady=(12, 0))
 
         self.mode_buttons = []

@@ -2,46 +2,163 @@
 
 import os
 import tkinter as tk
+import tkinter.font as tkfont
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import icons
 
 
-class FlatButton(tk.Frame):
-    """直角按钮：外框 Frame 承载 1px 描边，内层 Label 承载文字与点击。
+def rounded_points(x1, y1, x2, y2, radius):
+    """生成圆角矩形的多边形顶点，配合 create_polygon(smooth=True) 使用。
 
-    不用 Canvas 圆角是刻意的——直角描边在主题切换时只需重设两个控件的颜色，
-    而 Canvas 需要重绘全部图元。
+    拐角处的四个顶点被紧邻的直边顶点「夹住」，smooth=True 会把每个拐角
+    平滑成圆弧。radius 会被裁剪到不超过较短边的一半。
+    """
+    radius = min(radius, (x2 - x1) // 2, (y2 - y1) // 2)
+    return (
+        x1 + radius, y1,
+        x2 - radius, y1,
+        x2, y1,
+        x2, y1 + radius,
+        x2, y2 - radius,
+        x2, y2,
+        x2 - radius, y2,
+        x1 + radius, y2,
+        x1, y2,
+        x1, y2 - radius,
+        x1, y1 + radius,
+        x1, y1,
+    )
+
+
+class RoundedFrame(tk.Canvas):
+    """圆角卡片容器：Canvas 画圆角背景与描边，子控件放进 inner。
+
+    尺寸双向传递：
+    - 宽度自上而下 —— 外部 pack(fill=X) 拉伸 Canvas 时，同步给 inner；
+    - 高度自下而上 —— inner 内容变高时，反向把 Canvas 拉高。
     """
 
-    _PADDING_X = 12
+    def __init__(self, parent, colors, fill=None, border=None, radius=10,
+                 border_width=1, parent_bg=None):
+        if fill is None:
+            fill = colors["surface"]
+        if parent_bg is None:
+            try:
+                parent_bg = parent.cget("bg")
+            except tk.TclError:
+                parent_bg = colors["bg"]
+
+        self.colors = colors
+        self._fill = fill
+        self._border = border
+        self._radius = radius
+        self._bw = border_width
+
+        super().__init__(
+            parent, bg=parent_bg, highlightthickness=0, bd=0,
+        )
+
+        self.inner = tk.Frame(self, bg=fill)
+        self._win = self.create_window(border_width, border_width, window=self.inner, anchor="nw")
+        self.inner.bind("<Configure>", self._on_inner_config)
+        self.bind("<Configure>", self._on_canvas_config)
+
+    def _on_canvas_config(self, event):
+        """宽度自上而下：Canvas 被拉伸时，inner 跟随宽度，重绘背景。"""
+        inner_w = max(1, event.width - 2 * self._bw)
+        if int(self.itemcget(self._win, "width")) != inner_w:
+            self.itemconfig(self._win, width=inner_w)
+        self._redraw()
+
+    def _on_inner_config(self, event):
+        """高度自下而上：inner 内容变高时，Canvas 跟随，重绘背景。"""
+        h = event.height + 2 * self._bw
+        if int(self.cget("height")) != h:
+            self.config(height=h)
+        self._redraw()
+
+    def _redraw(self):
+        self.delete("bg")
+        w = int(self.cget("width"))
+        h = int(self.cget("height"))
+
+        if self._border is not None:
+            self.create_polygon(
+                rounded_points(0, 0, w, h, self._radius),
+                smooth=True, fill=self._border, outline="", tags="bg",
+            )
+            inset = self._bw
+            r = max(1, self._radius - self._bw)
+        else:
+            inset = 0
+            r = self._radius
+
+        self.create_polygon(
+            rounded_points(inset, inset, w - inset, h - inset, r),
+            smooth=True, fill=self._fill, outline="", tags="bg",
+        )
+        self.tag_lower("bg", self._win)
+
+    def set_fill(self, fill, border=None):
+        """就地换色（主题切换或行选中态），并同步 inner 下所有 Frame/Label 背景。"""
+        self._fill = fill
+        if border is not None:
+            self._border = border
+        self.inner.config(bg=fill)
+        self._recolor(self.inner, fill)
+        self._redraw()
+
+    @staticmethod
+    def _recolor(widget, color):
+        for child in widget.winfo_children():
+            if child.winfo_class() in ("Frame", "Label"):
+                try:
+                    child.config(bg=color)
+                except tk.TclError:
+                    pass
+                RoundedFrame._recolor(child, color)
+
+
+class FlatButton(tk.Canvas):
+    """圆角按钮：Canvas 画圆角背景，create_text 承载文字。
+
+    Canvas 不随文字自动缩放，故用 tkfont 量取文字宽度、自行定尺寸。
+    """
+
+    _PADDING_X = 14
     _PADDING_Y = 6
+    _RADIUS = 8
 
     def __init__(self, parent, text, command, colors, variant="primary", width=None):
         self.colors = colors
         self.variant = variant
         self.command = command
         self._enabled = True
+        self._text = text
 
-        super().__init__(parent, bg=self._border_color(), padx=1, pady=1)
+        try:
+            self._parent_bg = parent.cget("bg")
+        except tk.TclError:
+            self._parent_bg = colors["bg"]
 
-        self.label = tk.Label(
-            self,
-            text=text,
-            font=("Segoe UI", 9, "bold" if variant in ("primary", "secondary") else "normal"),
-            bg=self._bg_color(),
-            fg=self._fg_color(),
-            padx=self._PADDING_X,
-            pady=self._PADDING_Y,
-            cursor="hand2",
+        self._font = tkfont.Font(
+            family="Segoe UI", size=9,
+            weight="bold" if variant in ("primary", "secondary") else "normal",
         )
-        if width:
-            self.label.config(width=width)
-        self.label.pack(fill=tk.BOTH, expand=True)
+        text_w = self._font.measure(text)
+        w = (width if width else text_w) + 2 * self._PADDING_X
+        h = self._font.metrics("linespace") + 2 * self._PADDING_Y
 
-        self.label.bind("<Enter>", self._on_enter)
-        self.label.bind("<Leave>", self._on_leave)
-        self.label.bind("<Button-1>", self._on_click)
+        super().__init__(
+            parent, width=w, height=h,
+            bg=self._parent_bg, highlightthickness=0, cursor="hand2",
+        )
+        self._draw()
+
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+        self.bind("<Button-1>", self._on_click)
 
     def _border_color(self):
         if self.variant == "ghost":
@@ -71,20 +188,42 @@ class FlatButton(tk.Frame):
             return self.colors["accent"]
         return self.colors["ink_2"]
 
+    def _draw(self, fill=None):
+        self.delete("all")
+        w = int(self.cget("width"))
+        h = int(self.cget("height"))
+        fill = fill or self._bg_color()
+
+        self.create_polygon(
+            rounded_points(0, 0, w, h, self._RADIUS),
+            smooth=True, fill=self._border_color(), outline="",
+        )
+        self.create_polygon(
+            rounded_points(1, 1, w - 1, h - 1, max(1, self._RADIUS - 1)),
+            smooth=True, fill=fill, outline="",
+        )
+        self.create_text(
+            w // 2, h // 2, text=self._text,
+            font=self._font, fill=self._fg_color(),
+        )
+
     def _on_enter(self, _event):
         if self._enabled:
-            self.label.config(bg=self._hover_bg())
+            self._draw(self._hover_bg())
 
     def _on_leave(self, _event):
         if self._enabled:
-            self.label.config(bg=self._bg_color())
+            self._draw(self._bg_color())
 
     def _on_click(self, _event):
         if self._enabled and self.command:
             self.command()
 
     def set_text(self, text):
-        self.label.config(text=text)
+        self._text = text
+        w = self._font.measure(text) + 2 * self._PADDING_X
+        self.config(width=w)
+        self._draw()
 
 
 class IconButton(tk.Canvas):
@@ -137,28 +276,29 @@ class IconButton(tk.Canvas):
         self._draw_icon(self.colors["ink_2"])
 
 
-class Pill(tk.Frame):
-    """状态徽标：小圆点 + 文字。"""
+class Pill(tk.Canvas):
+    """胶囊状态徽标：圆角底 + 小圆点 + 文字。"""
 
     def __init__(self, parent, text, colors, tone="neutral"):
-        super().__init__(parent, bg=colors["surface"])
+        try:
+            self._parent_bg = parent.cget("bg")
+        except tk.TclError:
+            self._parent_bg = colors["bg"]
         self.colors = colors
+        self._text = text
+        self._tone = tone
+        self._font = tkfont.Font(family="Segoe UI", size=8, weight="bold")
 
-        self.inner = tk.Frame(self, bg=self._bg(tone))
-        self.inner.pack()
-
-        self.dot = tk.Canvas(
-            self.inner, width=10, height=10,
-            bg=self._bg(tone), highlightthickness=0,
+        w = self._measure(text)
+        h = self._font.metrics("linespace") + 3
+        super().__init__(
+            parent, width=w, height=h,
+            bg=self._parent_bg, highlightthickness=0,
         )
-        self.dot.pack(side=tk.LEFT, padx=(7, 0), pady=4)
-        self._dot_id = self.dot.create_oval(3, 3, 7, 7, fill=self._fg(tone), outline="")
+        self._draw()
 
-        self.label = tk.Label(
-            self.inner, text=text, font=("Segoe UI", 8, "bold"),
-            bg=self._bg(tone), fg=self._fg(tone), padx=3, pady=2,
-        )
-        self.label.pack(side=tk.LEFT, padx=(2, 8))
+    def _measure(self, text):
+        return 16 + self._font.measure(text) + 14
 
     def _bg(self, tone):
         return {
@@ -174,13 +314,27 @@ class Pill(tk.Frame):
             "danger": self.colors["danger"],
         }[tone]
 
+    def _draw(self):
+        self.delete("all")
+        w = int(self.cget("width"))
+        h = int(self.cget("height"))
+        fill = self._bg(self._tone)
+        fg = self._fg(self._tone)
+
+        self.create_polygon(
+            rounded_points(0, 0, w, h, h // 2),
+            smooth=True, fill=fill, outline="",
+        )
+        self.create_oval(6, h // 2 - 3, 12, h // 2 + 3, fill=fg, outline="")
+        self.create_text(
+            17, h // 2, text=self._text, font=self._font, fill=fg, anchor="w",
+        )
+
     def set(self, text, tone):
-        background = self._bg(tone)
-        foreground = self._fg(tone)
-        self.inner.config(bg=background)
-        self.dot.config(bg=background)
-        self.dot.itemconfig(self._dot_id, fill=foreground)
-        self.label.config(text=text, bg=background, fg=foreground)
+        self._text = text
+        self._tone = tone
+        self.config(width=self._measure(text))
+        self._draw()
 
 
 class SectionHeader(tk.Frame):
@@ -446,18 +600,18 @@ class FolderGroupRow(tk.Frame):
             row.set_selected(row.session.get("id") == session_id)
 
 
-class FavoriteRow(tk.Frame):
+class FavoriteRow(RoundedFrame):
     """收藏夹的一行：名称 + 路径 + 打开 + 启动 + 移除。"""
 
     def __init__(self, parent, path, colors, on_open, on_launch, on_remove):
-        super().__init__(parent, bg=colors["line"], padx=1, pady=1)
+        super().__init__(parent, colors, fill=colors["bg"], border=colors["line"], radius=9)
+        self.path = path
 
-        body = tk.Frame(self, bg=colors["bg"], height=40)
-        body.pack(fill=tk.BOTH, expand=True)
-        body.pack_propagate(False)
+        body = self.inner
+        body.config(bg=colors["bg"])
 
         icon = tk.Canvas(body, width=20, height=20, bg=colors["bg"], highlightthickness=0)
-        icon.pack(side=tk.LEFT, padx=(10, 6))
+        icon.pack(side=tk.LEFT, padx=(10, 6), pady=10)
         icons.draw(icon, "star_filled", colors["accent"], 14, x=3, y=3)
 
         text = tk.Frame(body, bg=colors["bg"])
@@ -466,7 +620,7 @@ class FavoriteRow(tk.Frame):
         tk.Label(
             text, text=os.path.basename(path) or path, font=("Segoe UI", 9, "bold"),
             bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
-        ).pack(fill=tk.X, pady=(5, 0))
+        ).pack(fill=tk.X, pady=(6, 0))
         tk.Label(
             text, text=elide_path(path, 42), font=("Segoe UI", 8),
             bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
