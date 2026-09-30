@@ -97,13 +97,15 @@ def launch(work_dir: str, mode: str) -> List[str]:
     return cmd
 
 
-def resume(work_dir: str, session_id: str) -> List[str]:
+def resume(work_dir: str, session_id: str, skip_permissions: bool = False) -> List[str]:
     _ensure_ready(work_dir)
 
     command = resolve_command()
     cmd = _wrap(command) + list(RESUME_ARGS)
     if session_id:
         cmd.append(session_id)
+    if skip_permissions:
+        cmd.extend(MODES["skip"]["args"])
 
     _spawn(cmd, work_dir)
     return cmd

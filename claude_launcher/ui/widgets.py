@@ -502,6 +502,21 @@ def elide_path(path, limit=35):
     return "..." + path[-(limit - 3):]
 
 
+def elide_text(text, font, max_width):
+    """按像素宽度截断文本，超出时末尾补省略号。
+
+    tkinter 的 Label 不随容器宽度截断文字——内容超宽时会按实际文字宽度
+    请求空间，把右侧的删除按钮顶出可视区。必须用量出的像素宽度手动截断。
+    """
+    if font.measure(text) <= max_width:
+        return text
+    ellipsis = "…"
+    for i in range(len(text), 0, -1):
+        if font.measure(text[:i] + ellipsis) <= max_width:
+            return text[:i] + ellipsis
+    return ellipsis
+
+
 class SessionRow(RoundedFrame):
     """会话列表的一行。单击选中，双击恢复。
 
@@ -510,6 +525,8 @@ class SessionRow(RoundedFrame):
     """
 
     _HEIGHT = 26
+    # 右侧固定预留：时间标签 + 删除按钮 + 两侧留白。
+    _RIGHT_RESERVE = 72
 
     def __init__(self, parent, session, colors, on_select, on_resume, on_delete):
         super().__init__(parent, colors, fill=colors["bg"], border=None,
@@ -527,14 +544,19 @@ class SessionRow(RoundedFrame):
         self.accent_bar = tk.Frame(self.inner, bg=colors["bg"], width=2)
         self.accent_bar.pack(side=tk.LEFT, fill=tk.Y)
 
+        raw_title = session.get("prompt") or session.get("id", "")
+        self._title_font = tkfont.Font(family="Segoe UI", size=9)
         self.title = tk.Label(
             self.inner,
-            text=session.get("prompt") or session.get("id", ""),
-            font=("Segoe UI", 9),
+            text=raw_title,
+            font=self._title_font,
             bg=colors["bg"], fg=colors["ink_2"],
             anchor=tk.W, padx=12,
         )
         self.title.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._raw_title = raw_title
+        # 等控件完成布局后再按实际可用宽度截断标题。
+        self.title.bind("<Configure>", self._on_title_configure)
 
         self.time_label = tk.Label(
             self.inner, text=format_time(session.get("mtime", 0)),
@@ -558,6 +580,13 @@ class SessionRow(RoundedFrame):
         self.delete_btn.bind("<Enter>", lambda _event: self.delete_btn.config(fg=colors["danger"]))
         self.delete_btn.bind("<Leave>", lambda _event: self.delete_btn.config(
             fg=colors["danger"] if self._selected else self._background()))
+
+    def _on_title_configure(self, event):
+        """标题 Label 宽度确定后，按实际像素截断文字，给右侧按钮预留空间。"""
+        available = event.width - self._RIGHT_RESERVE
+        if available < 20:
+            return
+        self.title.config(text=elide_text(self._raw_title, self._title_font, available))
 
     def _background(self):
         return self.colors["accent_soft"] if self._selected else self.colors["bg"]

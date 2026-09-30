@@ -353,8 +353,9 @@ class MainWindow:
     def resume_session(self, session):
         project_path = session.get("cwd", "")
         session_id = session.get("id", "")
+        skip = bool(self.config.get("default_skip_permissions", False))
         try:
-            agent.resume(project_path, session_id)
+            agent.resume(project_path, session_id, skip_permissions=skip)
         except agent.LaunchError as exc:
             self._error(exc.message)
             return

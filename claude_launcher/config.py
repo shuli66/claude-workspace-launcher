@@ -15,6 +15,7 @@ SCHEMA: Dict[str, Any] = {
     "favorites": [],
     "last_mode": "normal",
     "auto_close": True,
+    "default_skip_permissions": False,
     "theme": "auto",
 }
 
@@ -92,6 +93,8 @@ class Config:
             self.data["theme"] = SCHEMA["theme"]
         if not isinstance(self.data.get("auto_close"), bool):
             self.data["auto_close"] = SCHEMA["auto_close"]
+        if not isinstance(self.data.get("default_skip_permissions"), bool):
+            self.data["default_skip_permissions"] = SCHEMA["default_skip_permissions"]
 
     @staticmethod
     def _clean_favorites(value: Any) -> List[str]:

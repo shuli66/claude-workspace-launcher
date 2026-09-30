@@ -111,6 +111,20 @@ class SettingsDialog(_BaseDialog):
         )
         checkbox.pack(fill=tk.X)
 
+        self.skip_perms_var = tk.BooleanVar(
+            value=bool(self.config.get("default_skip_permissions", False)))
+        skip_checkbox = tk.Checkbutton(
+            body, text="默认使用跳过权限模式启动会话",
+            variable=self.skip_perms_var,
+            font=("Segoe UI", 9),
+            bg=colors["bg"], fg=colors["ink"],
+            activebackground=colors["bg"], activeforeground=colors["ink"],
+            selectcolor=colors["surface"],
+            anchor=tk.W, relief=tk.FLAT, highlightthickness=0,
+            command=self._save_skip_permissions,
+        )
+        skip_checkbox.pack(fill=tk.X, pady=(4, 0))
+
         footer = tk.Frame(body, bg=colors["bg"])
         footer.pack(fill=tk.X, side=tk.BOTTOM, pady=(16, 0))
 
@@ -157,6 +171,10 @@ class SettingsDialog(_BaseDialog):
 
     def _save_auto_close(self):
         self.config.set("auto_close", bool(self.auto_close_var.get()))
+        self.config.save()
+
+    def _save_skip_permissions(self):
+        self.config.set("default_skip_permissions", bool(self.skip_perms_var.get()))
         self.config.save()
 
     def _quit(self):
