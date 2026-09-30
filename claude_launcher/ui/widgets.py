@@ -380,21 +380,22 @@ class Pill(tk.Canvas):
 
 
 class SectionHeader(tk.Frame):
-    """小节标题：左侧标题，右侧计数。"""
+    """小节标题：左侧标题，右侧计数。bg 可覆盖（右侧 surface 背景上使用）。"""
 
-    def __init__(self, parent, title, colors):
-        super().__init__(parent, bg=colors["bg"])
+    def __init__(self, parent, title, colors, bg=None):
+        _bg = bg or colors["bg"]
+        super().__init__(parent, bg=_bg)
         self.colors = colors
 
         self.title_label = tk.Label(
             self, text=title, font=("Segoe UI", 8, "bold"),
-            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
+            bg=_bg, fg=colors["ink_3"], anchor=tk.W,
         )
         self.title_label.pack(side=tk.LEFT)
 
         self.count_label = tk.Label(
-            self, text="", font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.E,
+            self, text="", font=("Segoe UI", 7),
+            bg=_bg, fg=colors["ink_3"], anchor=tk.E,
         )
         self.count_label.pack(side=tk.RIGHT)
 
@@ -524,9 +525,9 @@ class SessionRow(RoundedFrame):
     故整行用 RoundedFrame 承载。
     """
 
-    _HEIGHT = 26
+    _HEIGHT = 24
     # 右侧固定预留：时间标签 + 删除按钮 + 两侧留白。
-    _RIGHT_RESERVE = 72
+    _RIGHT_RESERVE = 68
 
     def __init__(self, parent, session, colors, on_select, on_resume, on_delete):
         super().__init__(parent, colors, fill=colors["bg"], border=None,
@@ -545,7 +546,7 @@ class SessionRow(RoundedFrame):
         self.accent_bar.pack(side=tk.LEFT, fill=tk.Y)
 
         raw_title = session.get("prompt") or session.get("id", "")
-        self._title_font = tkfont.Font(family="Segoe UI", size=9)
+        self._title_font = tkfont.Font(family="Segoe UI", size=8)
         self.title = tk.Label(
             self.inner,
             text=raw_title,
@@ -560,12 +561,12 @@ class SessionRow(RoundedFrame):
 
         self.time_label = tk.Label(
             self.inner, text=format_time(session.get("mtime", 0)),
-            font=("Segoe UI", 8), bg=colors["bg"], fg=colors["ink_3"], padx=5,
+            font=("Segoe UI", 7), bg=colors["bg"], fg=colors["ink_3"], padx=5,
         )
         self.time_label.pack(side=tk.RIGHT)
 
         self.delete_btn = tk.Label(
-            self.inner, text="✕", font=("Segoe UI", 8),
+            self.inner, text="✕", font=("Segoe UI", 7),
             bg=colors["bg"], fg=colors["bg"], padx=4, cursor="hand2",
         )
         self.delete_btn.pack(side=tk.RIGHT)
@@ -644,26 +645,26 @@ class FolderGroupRow(tk.Frame):
         head.config(bg=colors["bg"])
 
         self.chevron = tk.Canvas(
-            head, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+            head, width=12, height=12, bg=colors["bg"], highlightthickness=0,
         )
-        self.chevron.pack(side=tk.LEFT, padx=(6, 2), pady=6)
+        self.chevron.pack(side=tk.LEFT, padx=(6, 2), pady=5)
         self._draw_chevron()
 
         self.folder_icon = tk.Canvas(
-            head, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+            head, width=12, height=12, bg=colors["bg"], highlightthickness=0,
         )
-        self.folder_icon.pack(side=tk.LEFT, padx=(0, 4), pady=6)
-        icons.draw(self.folder_icon, "folder", colors["ink_3"], 13, x=1, y=1)
+        self.folder_icon.pack(side=tk.LEFT, padx=(0, 4), pady=5)
+        icons.draw(self.folder_icon, "folder", colors["ink_3"], 11, x=1, y=1)
 
         self.name_label = tk.Label(
             head, text=os.path.basename(project_path) or project_path,
-            font=("Segoe UI", 9, "bold"), bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
+            font=("Segoe UI", 8, "bold"), bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
         )
-        self.name_label.pack(side=tk.LEFT, pady=6)
+        self.name_label.pack(side=tk.LEFT, pady=5)
 
         self.count_label = tk.Label(
-            head, text=str(len(sessions)), font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], padx=6, pady=6,
+            head, text=str(len(sessions)), font=("Segoe UI", 7),
+            bg=colors["bg"], fg=colors["ink_3"], padx=6, pady=5,
         )
         self.count_label.pack(side=tk.RIGHT)
 
@@ -692,7 +693,7 @@ class FolderGroupRow(tk.Frame):
         icons.draw(
             self.chevron,
             "chevron_down" if self.expanded else "chevron_right",
-            self.colors["ink_3"], 12, x=1, y=1,
+            self.colors["ink_3"], 10, x=1, y=1,
         )
 
     def _hover_in(self, _event):

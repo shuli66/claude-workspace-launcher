@@ -245,7 +245,7 @@ class MainWindow:
         colors = self.colors
         header = tk.Frame(self.main, bg=colors["surface"])
         header.pack(fill=tk.X, padx=14, pady=(0, 6))
-        self.favorite_header = SectionHeader(header, "收藏夹", colors)
+        self.favorite_header = SectionHeader(header, "收藏夹", colors, bg=colors["surface"])
         self.favorite_header.pack(fill=tk.X)
 
         # 设计稿：收藏区白底，行是奶油色圆角卡片
