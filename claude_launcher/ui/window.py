@@ -124,7 +124,7 @@ class MainWindow:
         if mark is not None:
             # 位图原始 128px，顶栏只有 46px 高。Tk 不裁剪子控件，
             # 原尺寸塞进去会溢出成一横条糊状——必须缩放到栏高以内。
-            mark = mark.subsample(5, 5)
+            mark = mark.subsample(7, 7)
             # 设计稿里标志坐在圆角小方块里（浅底 + 细描边）
             holder = RoundedFrame(
                 parent, colors, fill=colors["surface"], border=colors["line"],
@@ -133,7 +133,7 @@ class MainWindow:
             holder.pack(side=tk.LEFT, padx=(14, 9), pady=8)
             logo = tk.Label(holder.inner, image=mark, bg=colors["surface"])
             logo.image = mark
-            logo.pack(padx=5, pady=4)
+            logo.pack(padx=4, pady=4)
         else:
             tk.Label(
                 parent, text="✳", font=("Segoe UI", 15),
@@ -161,7 +161,7 @@ class MainWindow:
         bar = RoundedFrame(
             self.main, colors, fill=colors["bg"], border=colors["line"], radius=8,
         )
-        bar.pack(fill=tk.X, padx=16, pady=(16, 10))
+        bar.pack(fill=tk.X, padx=14, pady=(14, 13))
 
         inner = bar.inner
         inner.config(bg=colors["bg"])
@@ -179,44 +179,45 @@ class MainWindow:
         )
         self.dir_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
 
-        FlatButton(inner, "浏览", self.browse_directory, colors, variant="ghost").pack(
+        FlatButton(inner, "浏览", self.browse_directory, colors, variant="ghost",
+                   size="sm").pack(
             side=tk.RIGHT, padx=(0, 6), pady=4)
 
     def _build_current_card(self):
         colors = self.colors
         self.current_card = RoundedFrame(
-            self.main, colors, fill=colors["surface"], border=colors["line"], radius=11,
+            self.main, colors, fill=colors["bg"], border=colors["line"], radius=11,
         )
-        self.current_card.pack(fill=tk.X, padx=16, pady=(0, 14))
+        self.current_card.pack(fill=tk.X, padx=14, pady=(0, 13))
 
         inner = self.current_card.inner
-        inner.config(bg=colors["surface"])
+        inner.config(bg=colors["bg"])
 
-        inner_pad = tk.Frame(inner, bg=colors["surface"])
-        inner_pad.pack(fill=tk.X, padx=14, pady=12)
+        inner_pad = tk.Frame(inner, bg=colors["bg"])
+        inner_pad.pack(fill=tk.X, padx=14, pady=13)
 
-        head = tk.Frame(inner_pad, bg=colors["surface"])
+        head = tk.Frame(inner_pad, bg=colors["bg"])
         head.pack(fill=tk.X)
 
-        text = tk.Frame(head, bg=colors["surface"])
+        text = tk.Frame(head, bg=colors["bg"])
         text.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         self.current_name = tk.Label(
             text, text="未选择目录", font=("Segoe UI", 11, "bold"),
-            bg=colors["surface"], fg=colors["ink"], anchor=tk.W,
+            bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
         )
         self.current_name.pack(fill=tk.X)
 
         self.current_path = tk.Label(
             text, text="输入或浏览选择一个项目目录", font=("Segoe UI", 8),
-            bg=colors["surface"], fg=colors["ink_3"], anchor=tk.W,
+            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
         )
         self.current_path.pack(fill=tk.X)
 
         self.current_state = Pill(head, "未选择", colors, tone="neutral")
         self.current_state.pack(side=tk.RIGHT, anchor=tk.N)
 
-        actions = tk.Frame(inner_pad, bg=colors["surface"])
+        actions = tk.Frame(inner_pad, bg=colors["bg"])
         actions.pack(fill=tk.X, pady=(12, 0))
 
         self.mode_buttons = []
@@ -243,21 +244,22 @@ class MainWindow:
     def _build_favorites(self):
         colors = self.colors
         header = tk.Frame(self.main, bg=colors["surface"])
-        header.pack(fill=tk.X, padx=16, pady=(0, 6))
+        header.pack(fill=tk.X, padx=14, pady=(0, 6))
         self.favorite_header = SectionHeader(header, "收藏夹", colors)
         self.favorite_header.pack(fill=tk.X)
 
         # 设计稿：收藏区白底，行是奶油色圆角卡片
         self.favorite_area = ScrollArea(self.main, colors, bg=colors["surface"])
-        self.favorite_area.pack(fill=tk.BOTH, expand=True, padx=16)
+        self.favorite_area.pack(fill=tk.BOTH, expand=True, padx=14)
 
     def _build_footer(self):
         colors = self.colors
         footer = tk.Frame(self.main, bg=colors["surface"])
-        footer.pack(fill=tk.X, padx=16, pady=(10, 14))
+        footer.pack(fill=tk.X, padx=14, pady=(10, 14))
 
         FlatButton(
-            footer, "＋ 添加当前目录", self.add_to_favorites, colors, variant="ghost",
+            footer, "＋ 添加当前目录", self.add_to_favorites, colors,
+            variant="ghost", size="sm",
         ).pack(side=tk.LEFT)
 
         # 设计稿：键帽式快捷键提示（白底 + 细描边小方块）

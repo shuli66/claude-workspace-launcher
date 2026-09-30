@@ -151,18 +151,24 @@ class FlatButton(tk.Canvas):
     """圆角按钮：Canvas 画圆角背景，create_text 承载文字。
 
     Canvas 不随文字自动缩放，故用 tkfont 量取文字宽度、自行定尺寸。
+    size 三档对应设计稿的 .mk-btn / .mk-btn.sm / .mk-btn.xs。
     """
 
-    _PADDING_X = 14
-    _PADDING_Y = 6
-    _RADIUS = 8
+    _SIZES = {
+        "md": (14, 6, 8, 9),
+        "sm": (10, 5, 7, 9),
+        "xs": (10, 4, 6, 8),
+    }
 
-    def __init__(self, parent, text, command, colors, variant="primary", width=None):
+    def __init__(self, parent, text, command, colors, variant="primary",
+                 width=None, size="md"):
         self.colors = colors
         self.variant = variant
         self.command = command
         self._enabled = True
         self._text = text
+        pad_x, pad_y, self._radius, font_size = self._SIZES[size]
+        self._pad_x = pad_x
 
         try:
             self._parent_bg = parent.cget("bg")
@@ -170,12 +176,12 @@ class FlatButton(tk.Canvas):
             self._parent_bg = colors["bg"]
 
         self._font = tkfont.Font(
-            family="Segoe UI", size=9,
+            family="Segoe UI", size=font_size,
             weight="bold" if variant in ("primary", "secondary") else "normal",
         )
         text_w = self._font.measure(text)
-        w = (width if width else text_w) + 2 * self._PADDING_X
-        h = self._font.metrics("linespace") + 2 * self._PADDING_Y
+        w = (width if width else text_w) + 2 * pad_x
+        h = self._font.metrics("linespace") + 2 * pad_y
 
         super().__init__(
             parent, width=w, height=h,
@@ -222,11 +228,11 @@ class FlatButton(tk.Canvas):
         fill = fill or self._bg_color()
 
         self.create_polygon(
-            rounded_points(0, 0, w, h, self._RADIUS),
+            rounded_points(0, 0, w, h, self._radius),
             smooth=True, fill=self._border_color(), outline="",
         )
         self.create_polygon(
-            rounded_points(1, 1, w - 1, h - 1, max(1, self._RADIUS - 1)),
+            rounded_points(1, 1, w - 1, h - 1, max(1, self._radius - 1)),
             smooth=True, fill=fill, outline="",
         )
         self.create_text(
@@ -248,7 +254,7 @@ class FlatButton(tk.Canvas):
 
     def set_text(self, text):
         self._text = text
-        w = self._font.measure(text) + 2 * self._PADDING_X
+        w = self._font.measure(text) + 2 * self._pad_x
         self.config(width=w)
         self._draw()
 
@@ -598,32 +604,37 @@ class FolderGroupRow(tk.Frame):
         self.expanded = expanded
         self.on_toggle = on_toggle
 
-        header = tk.Frame(self, bg=colors["bg"], height=28)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
+        # 设计稿 .mk-grp：7px 圆角色块，悬停整块变色
+        header = RoundedFrame(
+            self, colors, fill=colors["bg"], border=None, radius=7,
+            parent_bg=colors["bg"],
+        )
+        header.pack(fill=tk.X, padx=2, pady=(4, 0))
         self.header = header
+        head = header.inner
+        head.config(bg=colors["bg"])
 
         self.chevron = tk.Canvas(
-            header, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+            head, width=14, height=14, bg=colors["bg"], highlightthickness=0,
         )
-        self.chevron.pack(side=tk.LEFT, padx=(4, 2))
+        self.chevron.pack(side=tk.LEFT, padx=(6, 2), pady=6)
         self._draw_chevron()
 
         self.folder_icon = tk.Canvas(
-            header, width=14, height=14, bg=colors["bg"], highlightthickness=0,
+            head, width=14, height=14, bg=colors["bg"], highlightthickness=0,
         )
-        self.folder_icon.pack(side=tk.LEFT, padx=(0, 4))
+        self.folder_icon.pack(side=tk.LEFT, padx=(0, 4), pady=6)
         icons.draw(self.folder_icon, "folder", colors["ink_3"], 13, x=1, y=1)
 
         self.name_label = tk.Label(
-            header, text=os.path.basename(project_path) or project_path,
+            head, text=os.path.basename(project_path) or project_path,
             font=("Segoe UI", 9, "bold"), bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
         )
-        self.name_label.pack(side=tk.LEFT)
+        self.name_label.pack(side=tk.LEFT, pady=6)
 
         self.count_label = tk.Label(
-            header, text=str(len(sessions)), font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], padx=6,
+            head, text=str(len(sessions)), font=("Segoe UI", 8),
+            bg=colors["bg"], fg=colors["ink_3"], padx=6, pady=6,
         )
         self.count_label.pack(side=tk.RIGHT)
 
@@ -656,16 +667,12 @@ class FolderGroupRow(tk.Frame):
         )
 
     def _hover_in(self, _event):
-        self.header.config(bg=self.colors["hover"])
-        self.name_label.config(bg=self.colors["hover"])
-        self.count_label.config(bg=self.colors["hover"])
+        self.header.set_fill(self.colors["hover"])
         self.chevron.config(bg=self.colors["hover"])
         self.folder_icon.config(bg=self.colors["hover"])
 
     def _hover_out(self, _event):
-        self.header.config(bg=self.colors["bg"])
-        self.name_label.config(bg=self.colors["bg"])
-        self.count_label.config(bg=self.colors["bg"])
+        self.header.set_fill(self.colors["bg"])
         self.chevron.config(bg=self.colors["bg"])
         self.folder_icon.config(bg=self.colors["bg"])
 
@@ -714,9 +721,9 @@ class FavoriteRow(RoundedFrame):
         actions = tk.Frame(body, bg=colors["bg"])
         actions.pack(side=tk.RIGHT, padx=(4, 8))
 
-        FlatButton(actions, "启动", lambda: on_launch(path), colors).pack(side=tk.RIGHT)
-        FlatButton(actions, "打开", lambda: on_open(path), colors, variant="ghost").pack(
-            side=tk.RIGHT, padx=(0, 5))
+        FlatButton(actions, "启动", lambda: on_launch(path), colors, size="xs").pack(side=tk.RIGHT)
+        FlatButton(actions, "打开", lambda: on_open(path), colors, variant="ghost",
+                   size="xs").pack(side=tk.RIGHT, padx=(0, 5))
 
         remove = tk.Label(
             actions, text="✕", font=("Segoe UI", 8),
