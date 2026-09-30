@@ -68,20 +68,37 @@ class RoundedFrame(tk.Canvas):
         self.inner.bind("<Configure>", self._on_inner_config)
         self.bind("<Configure>", self._on_canvas_config)
 
+    def _is_stretched(self):
+        """pack(fill=X/BOTH) 时宽度由父容器决定；否则应收缩到内容宽度。"""
+        try:
+            return self.pack_info().get("fill") in ("x", "both")
+        except tk.TclError:
+            return False
+
     def _on_canvas_config(self, event):
-        """宽度自上而下：Canvas 被拉伸时，inner 跟随宽度，重绘背景。"""
+        """宽度自上而下：仅当被拉伸时强制 inner 宽度。"""
         self._cur_w = event.width
-        inner_w = max(1, event.width - 2 * self._bw)
-        if int(self.itemcget(self._win, "width")) != inner_w:
-            self.itemconfig(self._win, width=inner_w)
+        if self._is_stretched():
+            inner_w = max(1, event.width - 2 * self._bw)
+            if int(self.itemcget(self._win, "width")) != inner_w:
+                self.itemconfig(self._win, width=inner_w)
         self._redraw()
 
     def _on_inner_config(self, event):
-        """高度自下而上：inner 内容变高时，Canvas 跟随，重绘背景。"""
+        """高度自下而上；未被拉伸时宽度跟随内容请求宽度。
+
+        Canvas 的默认请求宽度很大，pack(side=LEFT) 会照单全收 ——
+        固定尺寸的用法（如顶栏标志）必须在这里把宽度收回内容实际所需。
+        """
         h = event.height + 2 * self._bw
         self._cur_h = h
         if int(self.cget("height")) != h:
             self.config(height=h)
+        if not self._is_stretched():
+            req = self.inner.winfo_reqwidth() + 2 * self._bw
+            if int(self.cget("width")) != req:
+                self.config(width=req)
+                self._cur_w = req
         self._redraw()
 
     def _redraw(self):
@@ -380,20 +397,21 @@ class SectionHeader(tk.Frame):
 
 
 class ScrollArea(tk.Frame):
-    """带竖向滚动条的容器。子控件一律放进 self.content。"""
+    """可滚动容器。设计稿不显示滚动条，仅响应鼠标滚轮。
 
-    def __init__(self, parent, colors):
-        super().__init__(parent, bg=colors["bg"])
+    子控件一律放进 self.content。bg 可指定底色（会话侧栏用奶油底、
+    收藏区用白底）。
+    """
+
+    def __init__(self, parent, colors, bg=None):
+        bg = bg or colors["bg"]
+        super().__init__(parent, bg=bg)
         self.colors = colors
 
-        self.canvas = tk.Canvas(self, bg=colors["bg"], highlightthickness=0)
-        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas = tk.Canvas(self, bg=bg, highlightthickness=0)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.content = tk.Frame(self.canvas, bg=colors["bg"])
+        self.content = tk.Frame(self.canvas, bg=bg)
         self._window = self.canvas.create_window((0, 0), window=self.content, anchor="nw")
 
         self.content.bind("<Configure>", self._on_content_configure)
@@ -669,7 +687,9 @@ class FavoriteRow(RoundedFrame):
     """收藏夹的一行：名称 + 路径 + 打开 + 启动 + 移除。"""
 
     def __init__(self, parent, path, colors, on_open, on_launch, on_remove):
-        super().__init__(parent, colors, fill=colors["bg"], border=colors["line"], radius=9)
+        # 设计稿：收藏行是奶油色圆角卡片（白底收藏区上）
+        super().__init__(parent, colors, fill=colors["bg"], border=colors["line"],
+                         radius=9, parent_bg=colors["surface"])
         self.path = path
 
         body = self.inner

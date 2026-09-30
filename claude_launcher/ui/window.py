@@ -70,21 +70,18 @@ class MainWindow:
         self.topbar.pack_propagate(False)
         self._build_topbar(self.topbar)
 
-        self.status_bar = tk.Frame(self.root, bg=colors["bg"], height=22)
-        self.status_bar.pack(fill=tk.X)
-        self.status_bar.pack_propagate(False)
-
-        self.status_label = tk.Label(
-            self.status_bar, text="", font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
-        )
-        self.status_label.pack(fill=tk.BOTH, padx=14)
-
         separator = tk.Frame(self.root, bg=colors["line"], height=1)
         separator.pack(fill=tk.X)
 
         columns = tk.Frame(self.root, bg=colors["surface"])
         columns.pack(fill=tk.BOTH, expand=True)
+
+        # 设计稿没有常驻状态栏。状态消息改为底部浮动提示，3 秒后自动隐藏。
+        self._status_job = None
+        self.toast = tk.Label(
+            self.root, text="", font=("Segoe UI", 8),
+            padx=10, pady=4, bg=colors["sunken"], fg=colors["ink_2"],
+        )
 
         self.sidebar = tk.Frame(columns, bg=colors["bg"], width=SIDEBAR_WIDTH)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y)
@@ -128,11 +125,15 @@ class MainWindow:
             # 位图原始 128px，顶栏只有 46px 高。Tk 不裁剪子控件，
             # 原尺寸塞进去会溢出成一横条糊状——必须缩放到栏高以内。
             mark = mark.subsample(5, 5)
-            holder = tk.Frame(parent, bg=colors["bg"])
-            holder.pack(side=tk.LEFT, padx=(14, 9), pady=10)
-            logo = tk.Label(holder, image=mark, bg=colors["bg"])
+            # 设计稿里标志坐在圆角小方块里（浅底 + 细描边）
+            holder = RoundedFrame(
+                parent, colors, fill=colors["surface"], border=colors["line"],
+                radius=8, parent_bg=colors["bg"],
+            )
+            holder.pack(side=tk.LEFT, padx=(14, 9), pady=8)
+            logo = tk.Label(holder.inner, image=mark, bg=colors["surface"])
             logo.image = mark
-            logo.pack()
+            logo.pack(padx=5, pady=4)
         else:
             tk.Label(
                 parent, text="✳", font=("Segoe UI", 15),
@@ -156,15 +157,16 @@ class MainWindow:
 
     def _build_path_bar(self):
         colors = self.colors
+        # 设计稿：右侧白底面板上的奶油色输入条
         bar = RoundedFrame(
-            self.main, colors, fill=colors["surface"], border=colors["line"], radius=8,
+            self.main, colors, fill=colors["bg"], border=colors["line"], radius=8,
         )
         bar.pack(fill=tk.X, padx=16, pady=(16, 10))
 
         inner = bar.inner
-        inner.config(bg=colors["surface"])
+        inner.config(bg=colors["bg"])
 
-        icon = tk.Canvas(inner, width=18, height=18, bg=colors["surface"], highlightthickness=0)
+        icon = tk.Canvas(inner, width=18, height=18, bg=colors["bg"], highlightthickness=0)
         icon.pack(side=tk.LEFT, padx=(10, 6), pady=9)
         icons.draw(icon, "folder", colors["ink_3"], 14, x=2, y=2)
 
@@ -172,7 +174,7 @@ class MainWindow:
         self.dir_var.trace_add("write", self._on_path_change)
         self.dir_entry = tk.Entry(
             inner, textvariable=self.dir_var, font=("Segoe UI", 9),
-            bg=colors["surface"], fg=colors["ink"], relief=tk.FLAT,
+            bg=colors["bg"], fg=colors["ink"], relief=tk.FLAT,
             insertbackground=colors["ink"], bd=0,
         )
         self.dir_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
@@ -183,38 +185,38 @@ class MainWindow:
     def _build_current_card(self):
         colors = self.colors
         self.current_card = RoundedFrame(
-            self.main, colors, fill=colors["bg"], border=colors["line"], radius=11,
+            self.main, colors, fill=colors["surface"], border=colors["line"], radius=11,
         )
         self.current_card.pack(fill=tk.X, padx=16, pady=(0, 14))
 
         inner = self.current_card.inner
-        inner.config(bg=colors["bg"])
+        inner.config(bg=colors["surface"])
 
-        inner_pad = tk.Frame(inner, bg=colors["bg"])
+        inner_pad = tk.Frame(inner, bg=colors["surface"])
         inner_pad.pack(fill=tk.X, padx=14, pady=12)
 
-        head = tk.Frame(inner_pad, bg=colors["bg"])
+        head = tk.Frame(inner_pad, bg=colors["surface"])
         head.pack(fill=tk.X)
 
-        text = tk.Frame(head, bg=colors["bg"])
+        text = tk.Frame(head, bg=colors["surface"])
         text.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         self.current_name = tk.Label(
             text, text="未选择目录", font=("Segoe UI", 11, "bold"),
-            bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
+            bg=colors["surface"], fg=colors["ink"], anchor=tk.W,
         )
         self.current_name.pack(fill=tk.X)
 
         self.current_path = tk.Label(
             text, text="输入或浏览选择一个项目目录", font=("Segoe UI", 8),
-            bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,
+            bg=colors["surface"], fg=colors["ink_3"], anchor=tk.W,
         )
         self.current_path.pack(fill=tk.X)
 
         self.current_state = Pill(head, "未选择", colors, tone="neutral")
         self.current_state.pack(side=tk.RIGHT, anchor=tk.N)
 
-        actions = tk.Frame(inner_pad, bg=colors["bg"])
+        actions = tk.Frame(inner_pad, bg=colors["surface"])
         actions.pack(fill=tk.X, pady=(12, 0))
 
         self.mode_buttons = []
@@ -245,7 +247,8 @@ class MainWindow:
         self.favorite_header = SectionHeader(header, "收藏夹", colors)
         self.favorite_header.pack(fill=tk.X)
 
-        self.favorite_area = ScrollArea(self.main, colors)
+        # 设计稿：收藏区白底，行是奶油色圆角卡片
+        self.favorite_area = ScrollArea(self.main, colors, bg=colors["surface"])
         self.favorite_area.pack(fill=tk.BOTH, expand=True, padx=16)
 
     def _build_footer(self):
@@ -257,12 +260,23 @@ class MainWindow:
             footer, "＋ 添加当前目录", self.add_to_favorites, colors, variant="ghost",
         ).pack(side=tk.LEFT)
 
-        self.shortcut_label = tk.Label(
-            footer,
-            text="Enter 启动    Ctrl+O 浏览    Esc 最小化",
-            font=("Segoe UI", 8), bg=colors["surface"], fg=colors["ink_3"],
-        )
-        self.shortcut_label.pack(side=tk.RIGHT)
+        # 设计稿：键帽式快捷键提示（白底 + 细描边小方块）
+        hints = tk.Frame(footer, bg=colors["surface"])
+        hints.pack(side=tk.RIGHT)
+        for key, desc in (("Enter", "启动"), ("Ctrl+O", "浏览"), ("Esc", "最小化")):
+            item = tk.Frame(hints, bg=colors["surface"])
+            item.pack(side=tk.LEFT, padx=(0, 10))
+
+            cap = tk.Label(
+                item, text=key, font=("Segoe UI", 8, "bold"),
+                bg=colors["sunken"], fg=colors["ink_2"], padx=5, pady=1,
+            )
+            cap.pack(side=tk.LEFT, padx=(0, 4))
+
+            tk.Label(
+                item, text=desc, font=("Segoe UI", 8),
+                bg=colors["surface"], fg=colors["ink_3"],
+            ).pack(side=tk.LEFT)
 
     def _bind_shortcuts(self):
         self.root.bind("<Return>", lambda _event: self.launch())
@@ -548,13 +562,23 @@ class MainWindow:
     # ---------- 状态与提示 ----------
 
     def set_status(self, message, tone="info"):
+        """底部浮动提示：显示 3 秒后自动隐藏。设计稿没有常驻状态栏。"""
         color = {
-            "info": self.colors["ink_3"],
+            "info": self.colors["ink_2"],
             "success": self.colors["ok"],
             "error": self.colors["danger"],
             "warning": self.colors["accent"],
-        }.get(tone, self.colors["ink_3"])
-        self.status_label.config(text=message, fg=color)
+        }.get(tone, self.colors["ink_2"])
+        self.toast.config(text=message, fg=color, bg=self.colors["sunken"])
+        self.toast.place(relx=0.5, rely=1.0, anchor="s", y=-8)
+        self.toast.lift()
+        if self._status_job:
+            self.root.after_cancel(self._status_job)
+        self._status_job = self.root.after(3000, self._hide_status)
+
+    def _hide_status(self):
+        self._status_job = None
+        self.toast.place_forget()
 
     def _error(self, message):
         from tkinter import messagebox
