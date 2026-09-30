@@ -551,7 +551,7 @@ class SessionRow(RoundedFrame):
             text=raw_title,
             font=self._title_font,
             bg=colors["bg"], fg=colors["ink_2"],
-            anchor=tk.W, padx=12,
+            anchor=tk.W, padx=14,
         )
         self.title.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self._raw_title = raw_title
@@ -638,7 +638,7 @@ class FolderGroupRow(tk.Frame):
             self, colors, fill=colors["bg"], border=None, radius=7,
             parent_bg=colors["bg"],
         )
-        header.pack(fill=tk.X, padx=2, pady=(4, 0))
+        header.pack(fill=tk.X, pady=(4, 0))
         self.header = header
         head = header.inner
         head.config(bg=colors["bg"])
@@ -731,17 +731,17 @@ class FavoriteRow(RoundedFrame):
         body = self.inner
         body.config(bg=colors["bg"])
 
-        icon = tk.Canvas(body, width=20, height=20, bg=colors["bg"], highlightthickness=0)
-        icon.pack(side=tk.LEFT, padx=(10, 6), pady=10)
-        icons.draw(icon, "star_filled", colors["accent"], 14, x=3, y=3)
+        icon = tk.Canvas(body, width=16, height=16, bg=colors["bg"], highlightthickness=0)
+        icon.pack(side=tk.LEFT, padx=(9, 6), pady=7)
+        icons.draw(icon, "star_filled", colors["accent"], 13, x=1, y=1)
 
         text = tk.Frame(body, bg=colors["bg"])
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         tk.Label(
-            text, text=os.path.basename(path) or path, font=("Segoe UI", 9, "bold"),
+            text, text=os.path.basename(path) or path, font=("Segoe UI", 9),
             bg=colors["bg"], fg=colors["ink"], anchor=tk.W,
-        ).pack(fill=tk.X, pady=(6, 0))
+        ).pack(fill=tk.X, pady=(3, 0))
         tk.Label(
             text, text=elide_path(path, 42), font=("Segoe UI", 8),
             bg=colors["bg"], fg=colors["ink_3"], anchor=tk.W,

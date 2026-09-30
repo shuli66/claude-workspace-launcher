@@ -88,16 +88,16 @@ class MainWindow:
         self.sidebar.pack_propagate(False)
 
         sidebar_header = tk.Frame(self.sidebar, bg=colors["bg"])
-        sidebar_header.pack(fill=tk.X, padx=10, pady=(10, 6))
+        sidebar_header.pack(fill=tk.X, padx=10, pady=(12, 8))
         self.session_header = SectionHeader(sidebar_header, "会话", colors)
         self.session_header.pack(fill=tk.X)
 
         self.session_area = ScrollArea(self.sidebar, colors)
-        self.session_area.pack(fill=tk.BOTH, expand=True, padx=6, pady=(0, 8))
+        self.session_area.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 8))
 
         # 设计稿侧栏底部的操作提示
         hint = tk.Frame(self.sidebar, bg=colors["bg"])
-        hint.pack(fill=tk.X, padx=10, pady=(0, 8))
+        hint.pack(fill=tk.X, padx=10, pady=(0, 10))
         hint_icon = tk.Canvas(hint, width=12, height=12, bg=colors["bg"], highlightthickness=0)
         hint_icon.pack(side=tk.LEFT, padx=(0, 5))
         icons.draw(hint_icon, "clock", colors["ink_3"], 11, x=1, y=1)
@@ -255,7 +255,7 @@ class MainWindow:
     def _build_footer(self):
         colors = self.colors
         footer = tk.Frame(self.main, bg=colors["surface"])
-        footer.pack(fill=tk.X, padx=14, pady=(10, 14))
+        footer.pack(fill=tk.X, padx=14, pady=(9, 14))
 
         FlatButton(
             footer, "＋ 添加当前目录", self.add_to_favorites, colors,
@@ -324,7 +324,7 @@ class MainWindow:
                 on_toggle=self._on_group_toggle,
                 expanded=project_path not in self.collapsed_projects,
             )
-            group.pack(fill=tk.X, pady=(2, 0))
+            group.pack(fill=tk.X, pady=(1, 0))
             if self.selected_session_id:
                 group.set_child_selection(self.selected_session_id)
 
@@ -404,7 +404,7 @@ class MainWindow:
                     on_open=self.open_path_in_explorer,
                     on_launch=self.launch_from_path,
                     on_remove=self.remove_favorite,
-                ).pack(fill=tk.X, pady=(0, 4))
+                ).pack(fill=tk.X, pady=(0, 5))
 
         self.favorite_area.refresh_scrollregion()
 
